@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>File Upload Notifications</title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <main class="shell">
+    <section class="hero">
+      <div>
+        <p class="eyebrow">Upload pipeline</p>
+        <h1>Realtime notifications for your uploads</h1>
+        <p class="lede">Register or sign in, then keep the tab open to receive processing updates as Socket.IO events.</p>
+      </div>
+      <div class="status-card">
+        <div class="status-row">
+          <span class="dot" id="connectionDot"></span>
+          <span id="connectionState">Disconnected</span>
+        </div>
+        <div class="status-subtle" id="userLabel">No user signed in</div>
+      </div>
+    </section>
+
+    <section class="grid">
+      <article class="panel auth-panel">
+        <h2>Account</h2>
+        <div class="form-grid">
+          <input id="email" type="email" placeholder="you@example.com" />
+          <input id="password" type="password" placeholder="Password" />
+        </div>
+        <div class="button-row">
+          <button id="registerBtn">Register</button>
+          <button id="loginBtn" class="secondary">Login</button>
+          <button id="logoutBtn" class="ghost">Logout</button>
+        </div>
+        <p class="hint">This demo uses the JWT returned by the API to authenticate the socket connection.</p>
+      </article>
+
+      <article class="panel notifications-panel">
+        <div class="panel-head">
+          <h2>Notifications</h2>
+          <button id="refreshBtn" class="secondary small">Refresh</button>
+        </div>
+
+        <div class="bell-wrap">
+          <button id="bellBtn" class="bell-button" aria-expanded="false" aria-label="Open notifications">
+            <span>🔔</span>
+            <span class="badge" id="unreadBadge">0</span>
+          </button>
+
+          <div id="dropdown" class="dropdown hidden">
+            <div class="dropdown-head">
+              <strong>Recent activity</strong>
+              <button id="markAllReadBtn" class="link-button">Mark all read</button>
+            </div>
+            <div id="notificationList" class="notification-list"></div>
+          </div>
+        </div>
+      </article>
+    </section>
+  </main>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,35 @@
+{
+  "name": "fileuploadproject",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "dev": "nodemon index.js",
+    "worker": "node worker/index.js",
+    "dev:worker": "nodemon worker/index.js"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.1052.0",
+    "@aws-sdk/lib-storage": "^3.1052.0",
+    "@aws-sdk/s3-request-presigner": "^3.1057.0",
+    "amqplib": "^0.10.9",
+    "bcryptjs": "^2.4.3",
+    "busboy": "^1.6.0",
+    "cookie-parser": "^1.4.7",
+    "cors": "^2.8.6",
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1",
+    "ffmpeg-static": "^5.2.0",
+    "jsonwebtoken": "^9.0.0",
+    "mongoose": "^9.6.2",
+    "morgan": "^1.10.1",
+    "multer": "^2.1.1",
+    "socket.io": "^4.8.3"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.14"
+  }
+}
