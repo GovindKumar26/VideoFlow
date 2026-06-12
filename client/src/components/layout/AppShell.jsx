@@ -1,4 +1,4 @@
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Menu, X } from "lucide-react";
 import { useState } from "react";
 
@@ -9,6 +9,8 @@ import {
     Settings,
     LogOut,
 } from "lucide-react";
+import { useDispatch } from "react-redux";
+import { logout, logoutUser } from "@/features/auth/authSlice";
 
 const navItems = [
     {
@@ -33,9 +35,27 @@ const navItems = [
     },
 ];
 
+
+
 function AppShell({ children }) {
     const location = useLocation();
     const [sidebarOpen, setSidebarOpen] = useState(false);
+    const dispatch = useDispatch();
+    const navigate = useNavigate();
+
+    const handleClick = async () => {
+        try {
+            // 1. Fire the async handshake and unwrap its promise lifecycle resolution profile
+            await dispatch(logoutUser()).unwrap();
+
+            // 2. Redirect the browser location state cleanly back to the root sign-in page
+            navigate("/auth/signin");
+        } catch (error) {
+            console.error("Session teardown error:", error);
+            // Fallback redirection logic even on rejection
+            navigate("/auth/signin");
+        }
+    }
 
     return (
         <div className="min-h-screen bg-background text-foreground flex">
@@ -79,7 +99,7 @@ function AppShell({ children }) {
 
                 {/* Bottom Section */}
                 <div className="p-4 border-t border-border">
-                    <button className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-muted-foreground hover:text-foreground hover:bg-white/[0.03] transition-colors">
+                    <button onClick={handleClick} className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-muted-foreground hover:text-foreground hover:bg-white/[0.03] transition-colors">
                         <LogOut className="h-4 w-4" />
                         Sign Out
                     </button>

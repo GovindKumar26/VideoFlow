@@ -77,7 +77,7 @@ const rewritePlaylistWithTokenizedUrls = (content, fileId, token) => {
             : trimmed;
         if (normalized.endsWith(".m3u8")) {
             return `/stream/${fileId}/${normalized}?token=${token}`;
-        }
+        } 
         return `/stream/${fileId}/asset/${normalized}?token=${token}`;
     });
 

@@ -18,6 +18,7 @@ import {
 } from "../controllers/uploadingController.js";
 import auth from "../middlewares/auth.js";
 import upload from "../middlewares/multerMiddlewar.js";
+import { exportVideoEdit } from "../controllers/studioController.js";
 
 const router = express.Router();
 
@@ -43,6 +44,7 @@ router.get("/:id/download/mp4/:name", auth, downloadMp4Rendition);
 router.get("/:id", auth, getFile);
 router.delete("/:id", auth, deleteFile);
 router.patch("/:id", auth, updateFileDetails);
+router.post("/:id/export", auth, exportVideoEdit);
 
 export default router;
 
