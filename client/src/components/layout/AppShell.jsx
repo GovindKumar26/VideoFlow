@@ -1,5 +1,5 @@
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { Menu, X } from "lucide-react";
+import { Menu, Terminal, X } from "lucide-react";
 import { useState } from "react";
 
 import {
@@ -32,6 +32,12 @@ const navItems = [
         label: "Settings",
         path: "/settings",
         icon: Settings,
+    },
+    {
+        // 🎯 NEW SIDEBAR ROUTE MAP LINK
+        label: "Dev Console",
+        path: "/developer",
+        icon: Terminal,
     },
 ];
 

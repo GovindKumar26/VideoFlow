@@ -151,3 +151,58 @@ export const getStreamAssetByType = asyncHandler(async (req, res) => {
 
     res.redirect(302, signedUrl);
 });
+
+
+// server/controllers/fileController.js
+
+
+// server/controllers/fileController.js
+
+// server/controllers/fileController.js
+
+export const updateFileWhitelist = asyncHandler(async (req, res) => {
+    const { id } = req.params;
+    const { domains } = req.body;
+
+    if (!Array.isArray(domains)) {
+        return res.status(400).json({ message: "Domains payload must be an array of strings." });
+    }
+
+    // 🎯 FIX 1: Verify using 'id' to match your middleware's layout
+    if (!req.user || !req.user.id) {
+        return res.status(401).json({ message: "Authentication context missing. Please log in again." });
+    }
+
+    const file = await File.findById(id);
+    if (!file) {
+        return res.status(404).json({ message: "Video record file not found." });
+    }
+
+    // 🎯 FIX 2: Compare file.owner safely against req.user.id
+    const fileOwnerId = file.owner?._id ? file.owner._id.toString() : file.owner?.toString();
+    const authenticatedUserId = req.user.id.toString(); // Uses .id now!
+
+    if (!fileOwnerId || fileOwnerId !== authenticatedUserId) {
+        return res.status(403).json({ message: "Unauthorized action on this video resource." });
+    }
+
+    // Sanitize domains array safely
+    const sanitizedDomains = domains.map(domain => {
+        try {
+            if (domain.startsWith("http://") || domain.startsWith("https://")) {
+                return new URL(domain).hostname;
+            }
+            return domain.trim().toLowerCase();
+        } catch (e) {
+            return domain.trim().toLowerCase();
+        }
+    });
+
+    file.allowedDomains = sanitizedDomains;
+    await file.save();
+
+    res.status(200).json({
+        message: "Video embedding domain permissions updated successfully.",
+        allowedDomains: file.allowedDomains
+    });
+});

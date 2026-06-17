@@ -12,6 +12,7 @@ import { useDispatch } from "react-redux";
 import { getCurrentUser } from "./features/auth/authSlice";
 import ProtectedRoute from "./features/auth/components/ProtectedRoute";
 import { useEffect } from "react";
+import DeveloperConsole from "./features/developer/pages/DeveloperConsole";
 
 function App() {
 
@@ -37,6 +38,7 @@ function App() {
             </ProtectedRoute>
             } />
 
+         
           <Route path="/upload" element={
             <ProtectedRoute>
               <UploadPage />
@@ -61,6 +63,13 @@ function App() {
             </ProtectedRoute>} />
 
 
+            <Route path="/developer" element={
+            <ProtectedRoute>
+              <DeveloperConsole />
+            </ProtectedRoute>
+          } />
+
+  
         </Routes>
       </BrowserRouter>
     </div>

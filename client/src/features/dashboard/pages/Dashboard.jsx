@@ -366,7 +366,7 @@ function Dashboard() {
                       >
                         <td className="px-6 py-4 font-medium max-w-sm truncate text-foreground group-hover:text-primary transition-colors">
                           {/* 🎯 Wraps target title inside active react-router coordinates */}
-                          <Link to={`/video/${video._id}`} className="block w-full h-full">
+                          <Link to={`/videos/${video._id}`} className="block w-full h-full">
                             {video.originalName || "Unnamed Asset"}
                           </Link>
                         </td>

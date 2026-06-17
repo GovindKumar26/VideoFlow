@@ -10,6 +10,7 @@ import ffmpegPath from "ffmpeg-static";
 import s3Client from "../config/s3.js";
 import { getRabbitChannel, rabbitConfig } from "../config/rabbitmq.js";
 import { publishEvent } from "../events/publisher.js";
+import sharp from "sharp";
 
 dotenv.config();
 
@@ -31,6 +32,21 @@ const renditions = [
     { name: "hls-720p", width: 1280, height: 720, bitrateK: 2800 },
     { name: "hls-480p", width: 854, height: 480, bitrateK: 1400 }
 ];
+
+// Inside your Transcoding Worker file
+
+const buildWatermarkedFilter = (rendition) => {
+    // Standard baseline scale sequence parameters
+    const baseScale = `scale=w=${rendition.width}:h=${rendition.height}:force_original_aspect_ratio=decrease,scale=trunc(iw/2)*2:trunc(ih/2)*2`;
+
+    // THE LOGO CONTAINER: Renders a clean black backdrop bar block
+    const logoBox = `drawbox=x=20:y=20:w=140:h=40:color=black@0.7:t=fill`;
+
+    // THE LOGO TEXT: Dropped letter_spacing parameter cleanly to prevent Essentials build crashes
+    const logoText = `drawtext=text='VIDEOFLOW':x=35:y=32:fontsize=18:fontcolor=white`;
+
+    return `${baseScale},${logoBox},${logoText}`;
+};
 
 const ensureDir = async (dirPath) => {
     await fs.mkdir(dirPath, { recursive: true });
@@ -65,19 +81,32 @@ const runFfmpeg = (args) => {
     });
 };
 
+const LOGO_ASSET_PATH = path.join(process.cwd(), "assets", "videoflow-watermark.svg");
+
 const transcodeToHls = async (inputPath, outputDir) => {
     await ensureDir(outputDir);
+
+    const tempPngLogoPath = path.join(os.tmpdir(), "videoflow-watermark.png");
+    await sharp(LOGO_ASSET_PATH)
+        .resize({ width: 320 }) // Give it a crisp resolution baseline before FFmpeg downsizes it
+        .png()
+        .toFile(tempPngLogoPath);
 
     for (const rendition of renditions) {
         const playlistPath = path.join(outputDir, `${rendition.name}.m3u8`);
         const segmentPattern = path.join(outputDir, `${rendition.name}_%05d.ts`);
         const scaleFilter = `scale=w=${rendition.width}:h=${rendition.height}:force_original_aspect_ratio=decrease,scale=trunc(iw/2)*2:trunc(ih/2)*2`;
+        const filterComplex = buildWatermarkedFilter(rendition);
+
+        const filterComplexString = `[0:v]${scaleFilter},drawbox=x=10:y=10:w=180:h=48:color=black@0.7:t=fill[scaled];[1:v]scale=160:-1[logo];[scaled][logo]overlay=20:14`;
         const args = [
             "-y",
             "-i",
             inputPath,
-            "-vf",
-            scaleFilter,
+            "-i", tempPngLogoPath,
+            "-filter_complex",
+            `[0:v]${scaleFilter},drawbox=x=10:y=10:w=180:h=48:color=black@0.7:t=fill[scaled];[1:v]scale=160:-1[logo];[scaled][logo]overlay=20:14`,
+            
             "-c:a",
             "aac",
             "-ar",
@@ -106,7 +135,11 @@ const transcodeToHls = async (inputPath, outputDir) => {
         ];
 
         await runFfmpeg(args);
-    }
+    } 
+    // Clean up temporary PNG file after transcoding iterations complete
+    try {
+        await fs.unlink(tempPngLogoPath);
+    } catch (e) {}
 
     const masterPlaylist = ["#EXTM3U", "#EXT-X-VERSION:3"];
     for (const rendition of renditions) {
@@ -121,15 +154,25 @@ const transcodeToHls = async (inputPath, outputDir) => {
 const transcodeToMp4Renditions = async (inputPath, outputDir) => {
     await ensureDir(outputDir);
 
+    const tempPngLogoPath = path.join(os.tmpdir(), "videoflow-watermark-mp4.png");
+    await sharp(LOGO_ASSET_PATH)
+        .resize({ width: 320 })
+        .png()
+        .toFile(tempPngLogoPath);
+
     for (const rendition of renditions) {
         const outputPath = path.join(outputDir, `${rendition.name}.mp4`);
         const scaleFilter = `scale=w=${rendition.width}:h=${rendition.height}:force_original_aspect_ratio=decrease,scale=trunc(iw/2)*2:trunc(ih/2)*2`;
+        const filterComplex = buildWatermarkedFilter(rendition);
+        const filterComplexString = `[0:v]${scaleFilter},drawbox=x=10:y=10:w=180:h=48:color=black@0.7:t=fill[scaled];[1:v]scale=160:-1[logo];[scaled][logo]overlay=20:14`;
+
         const args = [
             "-y",
             "-i",
             inputPath,
-            "-vf",
-            scaleFilter,
+             "-i", tempPngLogoPath,
+            "-filter_complex", 
+            filterComplexString,
             "-c:a",
             "aac",
             "-ar",
@@ -167,6 +210,12 @@ const generateThumbnail = async (inputPath, outputPath) => {
 const generatePreview = async (inputPath, outputPath) => {
     await ensureDir(path.dirname(outputPath));
     const scaleFilter = "scale=w=1280:h=720:force_original_aspect_ratio=decrease,scale=trunc(iw/2)*2:trunc(ih/2)*2";
+    const previewFilter = [
+        "scale=w=1280:h=720:force_original_aspect_ratio=decrease",
+        "scale=trunc(iw/2)*2:trunc(ih/2)*2",
+        "drawtext=text='PREVIEW TRACK':x=(w-tw)/2:y=(h-th)/2:fontsize=36:fontcolor=white@0.25:shadowcolor=black@0.2:shadowx=2:shadowy=2"
+    ].join(",");
+
     const args = [
         "-y",
         "-i",
@@ -271,7 +320,9 @@ const startWorker = async () => {
             console.log(`Published video.processing for fileId=${fileId}`);
 
             baseDir = path.join(os.tmpdir(), "transcodes", fileId);
-            const inputPath = path.join(baseDir, "source");
+            const fileExtension = path.extname(s3Key) || ".mp4";
+            const inputPath = path.join(baseDir, `source${fileExtension}`); // Keeps container profiles valid for FFmpeg!
+
             const outputDir = path.join(baseDir, "hls");
             const mp4Dir = path.join(baseDir, "mp4");
 

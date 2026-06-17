@@ -3,6 +3,7 @@ import uploadRouter from "./routes/uploadRoutes.js";
 import fileRouter from "./routes/fileRoutes.js";
 import adminRouter from "./routes/adminRoutes.js";
 import streamRouter from "./routes/streamRoutes.js";
+import developerRoutes from "./routes/developerRoutes.js";
 import authRouter from "./routes/authRoutes.js";
 import webhookRouter from "./routes/webhookRoutes.js";
 import notificationRouter from "./routes/notificationRoutes.js";
@@ -94,6 +95,7 @@ app.use("/stream", streamRouter);
 app.use("/auth", authRouter);
 app.use("/webhooks", webhookRouter);
 app.use("/notifications", notificationRouter);
+app.use("/developer", developerRoutes);
 
 // 404 handler for undefined routes
 app.use((req, res, next) => {

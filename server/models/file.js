@@ -46,10 +46,28 @@ const fileSchema = new mongoose.Schema({
         enum: ["public", "unlisted", "private"],
         default: "public"
     },
+    allowedDomains: {
+        type: [String], 
+        default: [] // e.g., ["notion.so", "canvas.instructure.com", "my-blog.com"]
+    },
     lastError: String,
     uploadDate: {
         type: Date,
         default: Date.now
+    }, 
+
+    exports: [
+        {
+            title: String,      // e.g., "July Lecture (Trimmed Clip)"
+            status: { type: String, enum: ["processing", "completed", "failed"] },
+            cropRatio: String,  // e.g., "9:16"
+            masterKey: String,  // e.g., "mp4/6a2ab7e1e.../edited_source.mp4"
+            createdAt: { type: Date, default: Date.now }
+        }
+    ], 
+    allowedDomains: {
+        type: [String], 
+        default: [] // e.g., ["notion.so", "canvas.instructure.com", "my-blog.com"]
     }
 });
 
