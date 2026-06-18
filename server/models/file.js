@@ -12,7 +12,7 @@ const fileSchema = new mongoose.Schema({
     },
     status: {
         type: String,
-        enum: ["uploaded", "transcoded", "failed"],
+        enum: ["uploaded", "transcoded", "failed", "pending"],
         default: "uploaded"
     },
     processingAt: Date,

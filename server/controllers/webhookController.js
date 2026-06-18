@@ -31,6 +31,47 @@ export const deleteWebhook = asyncHandler(async (req, res) => {
     const webhook = await Webhook.findById(id);
     if (!webhook) return res.status(404).json({ message: "Not found" });
     if (webhook.user.toString() !== req.user.id) return res.status(403).json({ message: "Forbidden" });
-    await webhook.remove();
+    await Webhook.deleteOne({ _id: id });
     res.status(200).json({ message: "Deleted" });
+});
+
+
+
+// server/controllers/webhookController.js
+
+export const updateWebhook = asyncHandler(async (req, res) => {
+    const { id } = req.params;
+    const { url, events } = req.body;
+
+    // 1. Locate the target document context
+    const webhook = await Webhook.findById(id);
+    if (!webhook) {
+        return res.status(404).json({ message: "Webhook endpoint configuration context not found." });
+    }
+
+    // 2. Rigid Access Guard: Ensure the authenticated user owns this document record
+    if (webhook.user.toString() !== req.user.id) {
+        return res.status(403).json({ message: "Forbidden: Access allocation denied." });
+    }
+
+    // 3. Mutate fields selectively if provided in the request payload
+    if (url !== undefined) {
+        if (!url) return res.status(400).json({ message: "Destination target URL string cannot be empty." });
+        webhook.url = url;
+    }
+    
+    if (events !== undefined) {
+        if (!Array.isArray(events) || events.length === 0) {
+            return res.status(400).json({ message: "Events specification must be a populated non-empty array sequence." });
+        }
+        webhook.events = events;
+    }
+
+    // 4. Save updates to fire standard Mongoose model schemas constraints validations
+    await webhook.save();
+
+    res.status(200).json({ 
+        message: "⚙️ Webhook configurations updated and synced successfully.", 
+        webhook 
+    });
 });

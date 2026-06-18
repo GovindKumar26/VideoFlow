@@ -24,14 +24,18 @@ export const register = async (req, res) => {
     const user = new User({ email, passwordHash });
     await user.save();
 
-    const token = jwt.sign({ sub: user._id.toString(), email: user.email }, JWT_SECRET, { expiresIn: "7d" });
+    const token = jwt.sign(
+        { sub: user._id.toString(), email: user.email, role: user.role }, 
+        JWT_SECRET, 
+        { expiresIn: "7d" }
+    );
 
     // Attach the token directly into the client's cookie jar jar instead of the JSON payload
     res.cookie("token", token, cookieOptions);
 
     return res.status(201).json({ 
         message: "Registered successfully", 
-        user: { id: user._id, email: user.email } 
+        user: { id: user._id, email: user.email, role: user.role } 
     });
 };
 
@@ -45,14 +49,22 @@ export const login = async (req, res) => {
     const ok = await user.verifyPassword(password);
     if (!ok) return res.status(401).json({ message: "Invalid credentials" });
 
-    const token = jwt.sign({ sub: user._id.toString(), email: user.email }, JWT_SECRET, { expiresIn: "7d" });
+    const token = jwt.sign(
+        { sub: user._id.toString(), email: user.email, role: user.role }, 
+        JWT_SECRET, 
+        { expiresIn: "7d" }
+    );
 
     // Flush the cookie validation down the pipeline
     res.cookie("token", token, cookieOptions);
 
     return res.status(200).json({ 
         message: "Logged in successfully", 
-        user: { id: user._id, email: user.email } 
+        user: { id: user._id, 
+            email: user.email,
+            role: user.role, // 🎯 FIX: Return role instantly on authentication success!
+            name: user.name || "",
+            username: user.username || "" } 
     });
 };
 

@@ -15,11 +15,18 @@ export default function auth(req, res, next) {
     try {
         // 3. Cryptographically verify the token integrity against your secret key
         const payload = jwt.verify(token, JWT_SECRET);
-        
+
+        // 🎯 Temporary infrastructure diagnostic tracker log
+        console.log("🔍 JWT Payload Unpacked on Request:", payload);
+
         // 4. Attach the user's data structure to the request object scope
         // Subsequent controllers can now instantly read req.user.id
-        req.user = { id: payload.sub || payload.id, email: payload.email };
-        
+        req.user = {
+            id: payload.sub || payload.id,
+            email: payload.email,
+            role: payload.role // ◄ This makes requireAdmin work perfectly!
+        };
+
         // 5. Pass the request along down the middleware pipeline
         return next();
     } catch (err) {
@@ -27,3 +34,19 @@ export default function auth(req, res, next) {
         return res.status(401).json({ message: "Access Denied: Invalid or expired token" });
     }
 }
+
+
+
+// Middleware to check if user is admin
+export const requireAdmin = async (req, res, next) => {
+    if (!req.user) {
+        return res.status(401).json({ error: 'Authentication required. Please login first.' });
+    }
+
+    if (req.user.role !== 'admin') {
+        return res.status(403).json({ error: 'Access denied. Admin privileges required for this action.' });
+    }
+
+    next();
+};
+

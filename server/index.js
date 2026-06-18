@@ -20,6 +20,8 @@ import cookieParser from "cookie-parser"; // 1. Import the parser
 import jwt from "jsonwebtoken";
 import { setSocketServer } from "./config/socket.js";
 import logger from "morgan";
+import apiInboundRoutes from './routes/apiInboundRoutes.js'
+import adminRoutes from "./routes/adminRoutes.js";
 
 dotenv.config();
 
@@ -96,6 +98,8 @@ app.use("/auth", authRouter);
 app.use("/webhooks", webhookRouter);
 app.use("/notifications", notificationRouter);
 app.use("/developer", developerRoutes);
+app.use("/api", apiInboundRoutes);
+app.use("/api/admin", adminRoutes);
 
 // 404 handler for undefined routes
 app.use((req, res, next) => {

@@ -13,6 +13,10 @@ import { getCurrentUser } from "./features/auth/authSlice";
 import ProtectedRoute from "./features/auth/components/ProtectedRoute";
 import { useEffect } from "react";
 import DeveloperConsole from "./features/developer/pages/DeveloperConsole";
+import DlqDashboard from "./features/admin/components/DlqDashboard";
+import AdminProtectedRoute from "./features/auth/components/AdminProtectedRoute";
+import { Toaster } from 'sonner';
+import RecordPage from "./features/upload/pages/RecordPage";
 
 function App() {
 
@@ -34,15 +38,15 @@ function App() {
 
           <Route path="/dashboard" element={
             <ProtectedRoute>
-             <Dashboard />
+              <Dashboard />
             </ProtectedRoute>
-            } />
+          } />
 
-         
+
           <Route path="/upload" element={
             <ProtectedRoute>
               <UploadPage />
-             </ProtectedRoute> } />
+            </ProtectedRoute>} />
 
           <Route path="/videos" element={
             <ProtectedRoute><VideosPage />
@@ -50,28 +54,45 @@ function App() {
 
           <Route path="/videos/:id" element={
             <ProtectedRoute>
-            <VideoDetailsPage />
+              <VideoDetailsPage />
             </ProtectedRoute>} />
 
           <Route path="/studio/:id" element={
             <ProtectedRoute>
-               <StudioPage />
-              </ProtectedRoute>} />
+              <StudioPage />
+            </ProtectedRoute>} />
 
           <Route path="/settings" element={
             <ProtectedRoute><Settings />
             </ProtectedRoute>} />
 
 
-            <Route path="/developer" element={
+          <Route path="/developer" element={
             <ProtectedRoute>
               <DeveloperConsole />
             </ProtectedRoute>
           } />
 
-  
-        </Routes>
+
+          <Route
+            path="/admin/dlq"
+            element={
+              <AdminProtectedRoute>
+                <DlqDashboard />
+              </AdminProtectedRoute>
+            }
+          />
+
+           
+            <Route path="/record" element={
+              <ProtectedRoute>
+                <RecordPage />
+              </ProtectedRoute>
+            } />
+
+          </Routes>
       </BrowserRouter>
+      <Toaster richColors position="top-right" theme="dark" closeButton />
     </div>
   );
 }

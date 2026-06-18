@@ -19,6 +19,11 @@ const userSchema = new mongoose.Schema({
         sparse: true, // ⚠️ CRITICAL: Allows multiple users to have an empty string/null username initially without breaking the unique rule!
         trim: true,
     },
+    role: {
+        type : String,
+        required: true,
+        default: 'user',
+    }
 });
 
 userSchema.methods.verifyPassword = function (password) {

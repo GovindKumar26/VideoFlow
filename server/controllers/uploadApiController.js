@@ -7,6 +7,45 @@ import s3Client from "../config/s3.js";
 import File from "../models/File.js";
 import asyncHandler from "../utils/asyncHandler.js";
 
+// export const generatePassthroughUrl = asyncHandler(async (req, res) => {
+//     const { originalName, contentType } = req.body;
+
+//     if (!originalName) {
+//         return res.status(400).json({ message: "Missing parameter: 'originalName' is required." });
+//     }
+
+//     // 1. Establish a secure, isolated storage key inside your raw uploads directory
+//     const fileId = new crypto.randomUUID();
+//     const fileExtension = originalName.includes(".") ? originalName.split(".").pop() : "mp4";
+//     const s3Key = `raw-uploads/${req.user.id}/${fileId}.${fileExtension}`;
+
+//     // 2. Pre-register the tracking document in MongoDB as 'pending'
+//     const fileRecord = await File.create({
+//         owner: req.user.id, // Set securely by your validateApiKey middleware
+//         originalName,
+//         status: "pending", // Waiting for the browser upload to complete
+//         allowedDomains: [],
+//     });
+
+//     // 3. Formulate the S3 PutObject configuration command
+//     const command = new PutObjectCommand({
+//         Bucket: process.env.S3_BUCKET_NAME,
+//         Key: s3Key,
+//         ContentType: contentType || "video/mp4",
+//     });
+
+//     // 4. Generate a secure presigned upload URL expiring in 15 minutes (900 seconds)
+//     const uploadUrl = await getSignedUrl(s3Client, command, { expiresIn: 900 });
+
+//     // 5. Respond to the developer server instantly
+//     res.status(200).json({
+//         message: "Secure passthrough upload tokens generated successfully.",
+//         fileId: fileRecord._id,
+//         uploadUrl,
+//         s3Key, // Returned so the dev can reference it or track completion states
+//     });
+// });
+
 export const generatePassthroughUrl = asyncHandler(async (req, res) => {
     const { originalName, contentType } = req.body;
 
@@ -14,18 +53,18 @@ export const generatePassthroughUrl = asyncHandler(async (req, res) => {
         return res.status(400).json({ message: "Missing parameter: 'originalName' is required." });
     }
 
-    // 1. Establish a secure, isolated storage key inside your raw uploads directory
-    const fileId = new crypto.randomUUID();
-    const fileExtension = originalName.includes(".") ? originalName.split(".").pop() : "mp4";
-    const s3Key = `raw-uploads/${req.user.id}/${fileId}.${fileExtension}`;
-
-    // 2. Pre-register the tracking document in MongoDB as 'pending'
+    // 1. Pre-register the tracking document in MongoDB to get a clean Mongoose ObjectId
     const fileRecord = await File.create({
-        owner: req.user.id, // Set securely by your validateApiKey middleware
+        owner: req.user.id,
         originalName,
         status: "pending", // Waiting for the browser upload to complete
         allowedDomains: [],
     });
+
+    // 2. Convert the ObjectId instance explicitly to a raw string for the S3 Key path
+    const fileIdStr = fileRecord._id.toString();
+    const fileExtension = originalName.includes(".") ? originalName.split(".").pop() : "mp4";
+    const s3Key = `raw-uploads/${req.user.id}/${fileIdStr}.${fileExtension}`;
 
     // 3. Formulate the S3 PutObject configuration command
     const command = new PutObjectCommand({
@@ -34,15 +73,15 @@ export const generatePassthroughUrl = asyncHandler(async (req, res) => {
         ContentType: contentType || "video/mp4",
     });
 
-    // 4. Generate a secure presigned upload URL expiring in 15 minutes (900 seconds)
+    // 4. Generate a secure presigned upload URL expiring in 15 minutes
     const uploadUrl = await getSignedUrl(s3Client, command, { expiresIn: 900 });
 
     // 5. Respond to the developer server instantly
     res.status(200).json({
         message: "Secure passthrough upload tokens generated successfully.",
-        fileId: fileRecord._id,
+        fileId: fileIdStr, // Explicit string format matching the S3 path folder structure!
         uploadUrl,
-        s3Key, // Returned so the dev can reference it or track completion states
+        s3Key, 
     });
 });
 
