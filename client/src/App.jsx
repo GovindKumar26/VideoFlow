@@ -17,6 +17,7 @@ import DlqDashboard from "./features/admin/components/DlqDashboard";
 import AdminProtectedRoute from "./features/auth/components/AdminProtectedRoute";
 import { Toaster } from 'sonner';
 import RecordPage from "./features/upload/pages/RecordPage";
+import DocsPage from "./pages/DocsPage";
 
 function App() {
 
@@ -89,6 +90,8 @@ function App() {
                 <RecordPage />
               </ProtectedRoute>
             } />
+
+            <Route path="/docs" element={<DocsPage />} />
 
           </Routes>
       </BrowserRouter>

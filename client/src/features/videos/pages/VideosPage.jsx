@@ -9,6 +9,7 @@ import { fetchVideos } from "@/features/videos/videoSlice";
 function VideosPage() {
   const dispatch = useDispatch();
   const [search, setSearch] = useState("");
+  const [hoveredVideoId, setHoveredVideoId] = useState(null);
 
   //  Pull dynamic store states from the unified videoSlice
   const { list: videos, loading, error } = useSelector((state) => state.videos);
@@ -111,32 +112,42 @@ function VideosPage() {
               {filteredVideos.map((video) => {
                 // Point safely to your storage system bucket base address
                 const storageBaseUrl = "http://localhost:9000/uploads/";
-                const hasThumbnail = video.thumbnailKey && video.status === "transcoded";
+             //   const hasThumbnail = video.thumbnailUrl && video.status === "transcoded";
+                const hasThumbnail = video.thumbnailUrl && video.status === "transcoded";
+                const hasPreview = video.previewUrl && video.status === "transcoded";
+                const isHovered = hoveredVideoId === video._id;
 
                 return (
                   <Link
                     key={video._id} // 🎯 Fixed: Use MongoDB unique identifier keys
                     to={`/videos/${video._id}`}
+                    onMouseEnter={() => setHoveredVideoId(video._id)}
+                    onMouseLeave={() => setHoveredVideoId(null)}
                     className="group rounded-xl overflow-hidden border border-border bg-card hover:bg-white/[0.03] transition-all duration-200 hover:scale-[1.01]"
                   >
                     {/* Thumbnail Layout Group */}
                     <div className="aspect-video bg-muted relative flex items-center justify-center overflow-hidden border-b border-border">
-                      {hasThumbnail ? (
-                        <img
-                          src={`${storageBaseUrl}${video.thumbnailKey}`}
-                          alt={video.originalName}
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                        />
-                      ) : (
-                        <div className="flex flex-col items-center gap-2 text-white/30">
-                          <Film className="h-8 w-8" />
-                          {video.status !== "transcoded" && video.status !== "failed" && (
-                            <span className="text-[10px] font-mono uppercase tracking-wider bg-amber-500/10 border border-amber-500/20 text-amber-400 px-2 py-0.5 rounded animate-pulse">
-                              {video.status || "Processing"}
-                            </span>
-                          )}
-                        </div>
-                      )}
+                     {isHovered && hasPreview ? (
+                  <video
+                    src={video.previewUrl}
+                    muted
+                    autoPlay
+                    loop
+                    playsInline
+                    className="w-full h-full object-cover"
+                  />
+                ) : hasThumbnail ? (
+                  /* Otherwise, fall back cleanly to your signed image asset */
+                  <img
+                    src={video.thumbnailUrl}
+                    alt={video.originalName}
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                  />
+                ) : (
+                  <div className="flex flex-col items-center gap-2 text-white/30">
+                    <Film className="h-8 w-8" />
+                  </div>
+                )}
                     </div>
 
                     {/* Meta-Content Details Card Body */}
@@ -148,13 +159,12 @@ function VideosPage() {
                       <div className="flex flex-wrap gap-3 text-xs text-muted-foreground items-center">
                         {/* Dynamic Pipeline Pipeline Status Badge */}
                         <span
-                          className={`inline-flex items-center gap-1.5 font-medium ${
-                            video.status === "transcoded"
-                              ? "text-green-400"
-                              : video.status === "failed"
+                          className={`inline-flex items-center gap-1.5 font-medium ${video.status === "transcoded"
+                            ? "text-green-400"
+                            : video.status === "failed"
                               ? "text-red-400"
                               : "text-amber-400 animate-pulse"
-                          }`}
+                            }`}
                         >
                           <span className="w-1.5 h-1.5 rounded-full bg-current" />
                           {video.status === "transcoded" ? "Ready" : video.status}

@@ -100,17 +100,60 @@ export const uploadFile = asyncHandler(async (req, res) => {
     });
 });
 
+// export const getAllFiles = asyncHandler(async (req, res) => {
+//     if (!req.user || !req.user.id) {
+//         return res.status(401).json({ message: "Authentication required" });
+//     }
+
+//     const files = await File.find({ owner: req.user.id });
+//     res.status(200).json({
+//         message: "Files retrieved successfully",
+//         files: files
+//     });
+// });
+
+
+// 🎯 UPDATE THIS FUNCTION INSIDE YOUR server/controllers/fileController.js
+
 export const getAllFiles = asyncHandler(async (req, res) => {
     if (!req.user || !req.user.id) {
         return res.status(401).json({ message: "Authentication required" });
     }
 
+    // 1. Fetch the files belonging to the owner
     const files = await File.find({ owner: req.user.id });
+
+    // 2. 🪡 INJECT PROXIED THUMBNAIL URLS SECURELY
+    // 🎯 UPDATE INSIDE getAllFiles (server/controllers/fileController.js)
+    const filesWithSecureAssets = files.map((file) => {
+        const fileObj = file.toObject();
+
+        if (fileObj.status === "transcoded") {
+            const streamToken = createStreamToken(file);
+            const host = req.get("host");
+            const protocol = req.protocol;
+
+            // 🖼️ 1. Secure Thumbnail Link
+            if (fileObj.thumbnailKey) {
+                const thumbName = fileObj.thumbnailKey.split("/").pop();
+                fileObj.thumbnailUrl = `${protocol}://${host}/stream/assets/${fileObj._id}/${thumbName}?token=${streamToken}`;
+            }
+
+            // 🎬 2. Secure Preview Clip Link (Add this block!)
+            if (fileObj.previewKey) {
+                const previewName = fileObj.previewKey.split("/").pop();
+                fileObj.previewUrl = `${protocol}://${host}/stream/assets/${fileObj._id}/${previewName}?token=${streamToken}`;
+            }
+        }
+        return fileObj;
+    });
+
     res.status(200).json({
         message: "Files retrieved successfully",
-        files: files
+        files: filesWithSecureAssets // 👈 Send back the updated array
     });
 });
+
 
 export const getFile = asyncHandler(async (req, res) => {
     const file = await File.findById(req.params.id);
@@ -330,7 +373,7 @@ export const getWatchPage = asyncHandler(async (req, res) => {
     const clientIp = req.headers["x-forwarded-for"] || req.socket.remoteAddress || "Unknown IP";
 
     // 🎯 IFRAME EMBED SECURITY INSPECTOR
-// 🎯 IFRAME EMBED SECURITY INSPECTOR
+    // 🎯 IFRAME EMBED SECURITY INSPECTOR
     const referer = req.headers.referer;
     let isDomainAllowed = false;
     let parentDomain = "";
@@ -639,7 +682,7 @@ export const getEmbedPage = asyncHandler(async (req, res) => {
         }
     } else {
         // Prevent raw direct link browser tab execution — this view must live inside an authorized frame shell
-        isDomainAllowed = false; 
+        isDomainAllowed = false;
     }
 
     // 🔒 CONSTRUCT DYNAMIC SECURITY BOUNDARY
@@ -661,10 +704,10 @@ export const getEmbedPage = asyncHandler(async (req, res) => {
     const streamToken = createStreamToken(file); // Utilizing your internal token engine signature helper
     const host = req.get("host");
     const protocol = req.protocol;
-    
+
     const playbackUrl = `${protocol}://${host}/stream/${file._id}/master.m3u8?token=${streamToken}`;
-    const thumbnailUrl = file.thumbnailKey 
-        ? `${protocol}://${host}/stream/assets/${file._id}/${file.thumbnailKey.split("/").pop()}?token=${streamToken}` 
+    const thumbnailUrl = file.thumbnailKey
+        ? `${protocol}://${host}/stream/assets/${file._id}/${file.thumbnailKey.split("/").pop()}?token=${streamToken}`
         : null;
 
     res.setHeader("Content-Type", "text/html; charset=utf-8");

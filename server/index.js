@@ -37,8 +37,22 @@ const io = new Server(server, {
   }
 });
 
+// 🎯 UPDATE THIS BLOCK INSIDE YOUR server/index.js
+
 io.use((socket, next) => {
-  const token = socket.handshake.auth?.token || socket.handshake.headers?.authorization?.split(" ")?.[1];
+  // 🍪 1. Grab raw cookie string from handshake headers
+  const rawCookies = socket.handshake.headers.cookie;
+  let cookieToken = null;
+
+  if (rawCookies) {
+    // Parse the token value out of the cookie string mapping
+    const match = rawCookies.split("; ").find(row => row.startsWith("token="));
+    if (match) cookieToken = match.split("=")[1];
+  }
+
+  // 🔄 2. Look for the token in cookies, auth properties, or headers
+  const token = cookieToken || socket.handshake.auth?.token || socket.handshake.headers?.authorization?.split(" ")?.[1];
+
   if (!token) {
     return next(new Error("Authentication required"));
   }

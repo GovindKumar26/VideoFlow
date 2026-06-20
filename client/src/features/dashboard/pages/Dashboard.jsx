@@ -271,12 +271,20 @@ function Dashboard() {
             </Link>
 
             <div className="flex items-center gap-3">
-              <button className="px-4 py-2 text-sm rounded-md border border-border hover:bg-white/5 transition-colors">
-                Settings
-              </button>
-              <button className="px-4 py-2 text-sm rounded-md bg-primary text-primary-foreground hover:bg-primary/90 transition-colors">
-                Upload Video
-              </button>
+              <Link 
+    to="/settings" 
+    className="px-4 py-2 text-sm rounded-md border border-border hover:bg-white/5 transition-colors flex items-center justify-center"
+  >
+    Settings
+  </Link>
+  
+  {/* 📤 Upload Page Route Link */}
+  <Link 
+    to="/upload" 
+    className="px-4 py-2 text-sm rounded-md bg-primary text-primary-foreground hover:bg-primary/90 transition-colors flex items-center justify-center"
+  >
+    Upload Video
+  </Link>
             </div>
           </div>
         </header>
@@ -319,23 +327,7 @@ function Dashboard() {
             ))}
           </section>
 
-          {/* Quick Actions Panel */}
-          <section className="mb-10">
-            <h2 className="font-display text-2xl uppercase tracking-tight mb-4">
-              Quick Actions
-            </h2>
-            <div className="flex flex-wrap gap-4">
-              <button className="px-5 py-3 rounded-lg bg-primary text-primary-foreground font-medium transition-transform active:scale-95">
-                Upload Video
-              </button>
-              <button className="px-5 py-3 rounded-lg border border-border hover:bg-white/5 transition-colors">
-                Record Screen
-              </button>
-              <button className="px-5 py-3 rounded-lg border border-border hover:bg-white/5 transition-colors">
-                Create Folder
-              </button>
-            </div>
-          </section>
+          
 
           {/* Recent Uploads Table View */}
           <section>

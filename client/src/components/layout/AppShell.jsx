@@ -1,6 +1,7 @@
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { Menu, Terminal, X, ShieldAlert, Radio } from "lucide-react"; // 🎯 Added ShieldAlert
+import { Menu, Terminal, X, ShieldAlert, Radio, Code2 } from "lucide-react"; // 🎯 Added ShieldAlert
 import { useState } from "react";
+import { useSocketNotifications } from "@/hooks/useSocketNotifications";
 
 import {
     LayoutDashboard,
@@ -11,6 +12,7 @@ import {
 } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
 import { logoutUser } from "@/features/auth/authSlice";
+import NotificationDropdown from "./NotificationDropdown";
 
 const navItems = [
     {
@@ -43,6 +45,11 @@ const navItems = [
         path: "/developer",
         icon: Terminal,
     },
+    {
+        label: "Documentation",
+        path: "/docs",
+        icon: Code2,
+    },
 ];
 
 function AppShell({ children }) {
@@ -50,6 +57,11 @@ function AppShell({ children }) {
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const dispatch = useDispatch();
     const navigate = useNavigate();
+
+   const isAuthenticated = useSelector((state) => state.auth?.isAuthenticated);
+
+    // 📡 Pass the login state flag directly to activate the connection lanes
+    useSocketNotifications(isAuthenticated);
 
     const authState = useSelector((state) => state.auth);
 
@@ -82,6 +94,7 @@ function AppShell({ children }) {
                     >
                         Videoflow
                     </Link>
+                    
                 </div>
 
                 {/* Desktop Navigation */}
@@ -116,8 +129,8 @@ function AppShell({ children }) {
                             <Link
                                 to="/admin/dlq"
                                 className={`flex items-center gap-3 px-4 py-3 rounded-lg text-xs font-medium transition-colors ${location.pathname === "/admin/dlq"
-                                        ? "bg-red-500/10 text-red-400 border border-red-500/10 font-semibold"
-                                        : "text-muted-foreground hover:text-foreground hover:bg-white/[0.03]"
+                                    ? "bg-red-500/10 text-red-400 border border-red-500/10 font-semibold"
+                                    : "text-muted-foreground hover:text-foreground hover:bg-white/[0.03]"
                                     }`}
                             >
                                 <ShieldAlert className="h-4 w-4 text-red-400 shrink-0" />
@@ -153,9 +166,17 @@ function AppShell({ children }) {
                         </p>
                     </div>
 
-                    <div className="h-9 w-9 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center text-sm font-semibold text-primary uppercase select-none">
-                        {currentName.charAt(0)}
-                    </div>
+                    
+
+                    <div className="flex items-center gap-4">
+        {/* 🔔 Live Action Panel Bell Dropdown Asset */}
+        <NotificationDropdown />
+
+        {/* User Profile Bubble Bubble */}
+        <div className="h-9 w-9 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center text-sm font-semibold text-primary uppercase select-none">
+            {currentName.charAt(0)}
+        </div>
+    </div>
                 </header>
 
                 {/* Page Content */}
@@ -209,8 +230,8 @@ function AppShell({ children }) {
                                             to="/admin/dlq"
                                             onClick={() => setSidebarOpen(false)}
                                             className={`flex items-center gap-3 px-4 py-3 rounded-lg text-xs font-medium transition-colors ${location.pathname === "/admin/dlq"
-                                                    ? "bg-red-500/10 text-red-400 border border-red-500/10 font-semibold"
-                                                    : "text-muted-foreground hover:text-foreground hover:bg-white/[0.03]"
+                                                ? "bg-red-500/10 text-red-400 border border-red-500/10 font-semibold"
+                                                : "text-muted-foreground hover:text-foreground hover:bg-white/[0.03]"
                                                 }`}
                                         >
                                             <ShieldAlert className="h-4 w-4 text-red-400 shrink-0" />
