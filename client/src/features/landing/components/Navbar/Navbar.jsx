@@ -2,7 +2,7 @@ import React from 'react'
 import Logo from './Logo'
 import NavLinks from './Navlinks'
 import AudienceToggle from './AudienceToggle'
-import SignInButton from './SignInButton'
+import SignInButton from './SignInButton.jsx'
 
 function Navbar() {
   return (
