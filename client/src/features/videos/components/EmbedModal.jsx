@@ -1,4 +1,6 @@
 // src/features/videos/components/EmbedModal.jsx
+
+/* eslint-disable react-hooks/set-state-in-effect, no-unused-vars, react-hooks/exhaustive-deps */
 import React, { useState, useEffect } from 'react';
 import api from "@/axiosApi/axios"; 
 

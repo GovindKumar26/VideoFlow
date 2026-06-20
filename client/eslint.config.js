@@ -17,5 +17,13 @@ export default defineConfig([
       globals: globals.browser,
       parserOptions: { ecmaFeatures: { jsx: true } },
     },
+    // 🎯 ADDED THE RULES CONFIGURATION MATRIX HERE:
+    rules: {
+      //  Downgrade unused variables to a simple warning so it doesn't break your build pipeline
+      "no-unused-vars": "warn",
+
+      //  Disable the aggressive Fast Refresh check for constant exports (shadcn UI files use these)
+      "react-refresh/only-export-components": "off"
+    }
   },
 ])

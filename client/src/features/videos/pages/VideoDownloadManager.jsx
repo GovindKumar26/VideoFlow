@@ -25,7 +25,7 @@ export default function VideoDownloadsManager({ videoId }) {
             const response = await api.get(`/files/${videoId}/download/mp4/${encodeURIComponent(targetIdentifier)}`);
 
             // Allocate system window context thread download target
-            window.location.href = response.data.downloadUrl;
+            window.open(response.data.downloadUrl, "_self");
         } catch (err) {
             const serverMessage = err.response?.data?.message || "Failed to obtain secure object download link.";
             alert(serverMessage);

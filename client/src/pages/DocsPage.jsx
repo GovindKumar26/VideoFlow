@@ -26,7 +26,8 @@ function generateEmbedUrl(videoId, viewerEmail, apiSecret) {
         .digest("hex");
 
     // Construct the authenticated secure frame URL
-    return \`https://videoflow.app/embed/\${videoId}?viewer=\${encodeURIComponent(viewer)}\&sig=\${sig}\`;
+  
+    return \`https://videoflow.app/embed/\${videoId}?viewer=\${encodeURIComponent(viewer)}&sig=\${sig}\`;
 }`,
     iframe: `<iframe 
   src="https://videoflow.app/embed/VIDEO_ID?viewer=user@domain.com&sig=GENERATED_HEX_SIGNATURE"

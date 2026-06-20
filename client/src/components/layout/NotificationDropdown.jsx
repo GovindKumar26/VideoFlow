@@ -97,9 +97,9 @@ export default function NotificationDropdown() {
                                 No recent processing events.
                             </p>
                         ) : (
-                            notifications.map((n) => (
+                            notifications.map((n, index) => (
                                 <div
-                                    key={n._id || n.id || Math.random()}
+                                    key={n._id || n.id || `notif-fallback-${index}`}
                                     onClick={() => {
                                         const fileId = n.data?.fileId;
                                         if (fileId) window.location.href = `${apiBaseUrl}/videos/${fileId}`;

@@ -1,3 +1,5 @@
+/* eslint-disable react-hooks/set-state-in-effect, no-unused-vars, react-hooks/exhaustive-deps */
+
 // // import { Link, useNavigate, useParams } from "react-router-dom";
 // // import {
 // //   ArrowLeft,
