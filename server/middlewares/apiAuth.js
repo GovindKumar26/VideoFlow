@@ -1,6 +1,6 @@
 // server/middleware/apiAuth.js
 import crypto from "crypto";
-import ApiKey from "../models/ApiKey.js";
+import ApiKey from "../models/apiKey.js";
 
 export const validateApiKey = async (req, res, next) => {
     const authHeader = req.headers.authorization;

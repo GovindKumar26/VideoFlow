@@ -1,7 +1,7 @@
 // server/controllers/apiKeyController.js
 import crypto from "crypto";
 
-import ApiKey from "../models/ApiKey.js";
+import ApiKey from "../models/apiKey.js";
 import asyncHandler from "../utils/asyncHandler.js";
 
 export const createApiKey = asyncHandler(async (req, res) => {
