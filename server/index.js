@@ -85,11 +85,24 @@ setSocketServer(io);
 // });
 
 app.use(logger('dev'))
+const allowedOrigins = [
+    'http://localhost:5173', // Your local Vite/React dev server
+    'https://video-flow-kree2.vercel.app' // 👈 CHANGE THIS to your exact production Vercel URL!
+];
+
 app.use(cors({
-  // Match the exact URL and port your frontend server is running on
-  origin: 'http://localhost:5173', 
-  credentials: true
+    origin: function (origin, callback) {
+        // Allow requests with no origin (like mobile apps or curl requests)
+        if (!origin) return callback(null, true);
+        if (allowedOrigins.indexOf(origin) === -1) {
+            const msg = 'The CORS policy for this site does not allow access from the specified Origin.';
+            return callback(new Error(msg), false);
+        }
+        return callback(null, true);
+    },
+    credentials: true // Crucial for cookie-parser / auth tokens
 }));
+
 app.use(express.json());
 app.use(express.static(path.join(__dirname, "public")));
 app.use(cookieParser());
