@@ -103,9 +103,10 @@ app.use(cors({
     credentials: true // Crucial for cookie-parser / auth tokens
 }));
 
+app.use(cookieParser());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, "public")));
-app.use(cookieParser());
+
 
 const PORT = process.env.PORT || 3000;
 
