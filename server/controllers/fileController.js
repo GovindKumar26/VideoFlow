@@ -1,7 +1,7 @@
 // server/controllers/fileController.js
 import crypto from "crypto";
 
-import File from "../models/File.js";
+import File from "../models/file.js";
 import asyncHandler from "../utils/asyncHandler.js";
 
 export const generateEmbedSignature = asyncHandler(async (req, res) => {

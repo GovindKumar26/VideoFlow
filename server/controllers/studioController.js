@@ -103,7 +103,7 @@
 
 
 import mongoose from "mongoose"; // 🎯 ADDED: Needed to generate unique sub-document ObjectIds
-import File from "../models/File.js";
+import File from "../models/file.js";
 import asyncHandler from "../utils/asyncHandler.js";
 import { getRabbitChannel, rabbitConfig } from "../config/rabbitmq.js";
 

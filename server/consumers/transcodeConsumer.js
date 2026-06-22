@@ -1,5 +1,5 @@
 import { getRabbitChannel, rabbitConfig } from "../config/rabbitmq.js";
-import File from "../models/File.js";
+import File from "../models/file.js";
 import { createAndEmitNotification } from "../services/notificationService.js";
 import { dispatchEventForUser } from "../services/webhookDeliveryService.js";
 

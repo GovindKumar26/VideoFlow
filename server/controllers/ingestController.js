@@ -1,6 +1,6 @@
 // server/controllers/ingestController.js
 
-import File from "../models/File.js";
+import File from "../models/file.js";
 import { publishEvent } from "../events/publisher.js";
 import asyncHandler from "../utils/asyncHandler.js";
 

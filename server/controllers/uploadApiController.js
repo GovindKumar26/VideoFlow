@@ -4,7 +4,7 @@ import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
 import crypto from "crypto";
 import s3Client from "../config/s3.js";
-import File from "../models/File.js";
+import File from "../models/file.js";
 import asyncHandler from "../utils/asyncHandler.js";
 
 // export const generatePassthroughUrl = asyncHandler(async (req, res) => {

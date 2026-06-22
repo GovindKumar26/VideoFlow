@@ -10,7 +10,7 @@ import ffmpegPath from "ffmpeg-static";
 import s3Client from "../config/s3.js";
 import { getRabbitChannel, rabbitConfig } from "../config/rabbitmq.js";
 import { publishEvent } from "../events/publisher.js";
-import File from "../models/File.js";
+import File from "../models/file.js";
 import dbConnect from "../config/database.js";
 
 dotenv.config();
