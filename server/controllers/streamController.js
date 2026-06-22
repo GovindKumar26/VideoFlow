@@ -11,7 +11,7 @@ const ASSET_PREFIX = "assets";
 // const ASSET_PREFIX = "uploads/assets"; // 🎯 Change this from "assets" to "uploads/assets"
 const DEFAULT_TTL_SECONDS = 600;
 const DEFAULT_STREAM_JWT_TTL_SECONDS = 60;
-const DEFAULT_PRESIGN_TTL_SECONDS = 10;
+const DEFAULT_PRESIGN_TTL_SECONDS = 300;
 
 const streamToString = async (stream) => {
     const chunks = [];
