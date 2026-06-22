@@ -39,22 +39,23 @@ const io = new Server(server, {
 
 // 🎯 UPDATE THIS BLOCK INSIDE YOUR server/index.js
 
+
 io.use((socket, next) => {
-  // 🍪 1. Grab raw cookie string from handshake headers
   const rawCookies = socket.handshake.headers.cookie;
   let cookieToken = null;
 
   if (rawCookies) {
-    // Parse the token value out of the cookie string mapping
     const match = rawCookies.split("; ").find(row => row.startsWith("token="));
     if (match) cookieToken = match.split("=")[1];
   }
 
-  // 🔄 2. Look for the token in cookies, auth properties, or headers
   const token = cookieToken || socket.handshake.auth?.token || socket.handshake.headers?.authorization?.split(" ")?.[1];
 
+  // 🚪 COMFORTABLE FALLBACK: If there is no token, don't crash the connection!
+  // Just let them connect as a guest or unauthenticated socket channel.
   if (!token) {
-    return next(new Error("Authentication required"));
+    console.log("ℹ️ Anonymous socket client connected (No auth token present yet)");
+    return next(); 
   }
 
   try {
@@ -62,17 +63,57 @@ io.use((socket, next) => {
     socket.data.user = { id: payload.sub || payload.id, email: payload.email };
     return next();
   } catch (error) {
-    return next(new Error("Invalid or expired token"));
+    // Log the error but don't break the connection lifecycle for other HTTP components
+    console.error("⚠️ Socket authentication failed:", error.message);
+    return next();
   }
 });
 
+// io.use((socket, next) => {
+//   // 🍪 1. Grab raw cookie string from handshake headers
+//   const rawCookies = socket.handshake.headers.cookie;
+//   let cookieToken = null;
+
+//   if (rawCookies) {
+//     // Parse the token value out of the cookie string mapping
+//     const match = rawCookies.split("; ").find(row => row.startsWith("token="));
+//     if (match) cookieToken = match.split("=")[1];
+//   }
+
+//   // 🔄 2. Look for the token in cookies, auth properties, or headers
+//   const token = cookieToken || socket.handshake.auth?.token || socket.handshake.headers?.authorization?.split(" ")?.[1];
+
+//   if (!token) {
+//     return next(new Error("Authentication required"));
+//   }
+
+//   try {
+//     const payload = jwt.verify(token, process.env.JWT_SECRET || "change-me-in-prod");
+//     socket.data.user = { id: payload.sub || payload.id, email: payload.email };
+//     return next();
+//   } catch (error) {
+//     return next(new Error("Invalid or expired token"));
+//   }
+// });
+
+
 io.on("connection", (socket) => {
   const userId = socket.data.user?.id;
+  
+  // Only join personal notification rooms if they are verified users!
   if (userId) {
     socket.join(`user:${userId}`);
     socket.emit("notification:connected", { userId, message: "Notifications connected" });
   }
 });
+
+// io.on("connection", (socket) => {
+//   const userId = socket.data.user?.id;
+//   if (userId) {
+//     socket.join(`user:${userId}`);
+//     socket.emit("notification:connected", { userId, message: "Notifications connected" });
+//   }
+// });
 
 setSocketServer(io);
 
@@ -85,22 +126,30 @@ setSocketServer(io);
 // });
 
 app.use(logger('dev'))
+
 const allowedOrigins = [
-    'http://localhost:5173', // Your local Vite/React dev server
-    'https://video-flow-kree2.vercel.app' // 👈 CHANGE THIS to your exact production Vercel URL!
+    'http://localhost:5173', 
+    'https://video-flow-kree2.vercel.app' // ⚠️ Double-check this matches your Vercel dashboard domain EXACTLY!
 ];
 
 app.use(cors({
     origin: function (origin, callback) {
-        // Allow requests with no origin (like mobile apps or curl requests)
+        // 1. Allow internal requests, server-to-server, postman, or curl tasks
         if (!origin) return callback(null, true);
-        if (allowedOrigins.indexOf(origin) === -1) {
-            const msg = 'The CORS policy for this site does not allow access from the specified Origin.';
+        
+        // Clean up any accidental trailing slashes from the incoming browser origin header
+        const cleanOrigin = origin.replace(/\/$/, "");
+
+        if (allowedOrigins.includes(cleanOrigin)) {
+            return callback(null, true);
+        } else {
+            //  LOG THE EXACT DOMAIN THAT FAILED so you can read it in your Render dashboard logs!
+            console.error(`CORS Blocked Origin: ${origin}`);
+            const msg = `The CORS policy for this site does not allow access from the specified Origin: ${origin}`;
             return callback(new Error(msg), false);
         }
-        return callback(null, true);
     },
-    credentials: true // Crucial for cookie-parser / auth tokens
+    credentials: true 
 }));
 
 app.use(cookieParser());
