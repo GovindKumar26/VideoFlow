@@ -5,10 +5,10 @@ import File from "../models/file.js";
 import asyncHandler from "../utils/asyncHandler.js";
 import jwt from "jsonwebtoken";
 
-// const HLS_PREFIX = "hls";
-// const ASSET_PREFIX = "assets";
-const HLS_PREFIX = "uploads/hls"; // 🎯 Change this from "hls" to "uploads/hls"
-const ASSET_PREFIX = "uploads/assets"; // 🎯 Change this from "assets" to "uploads/assets"
+const HLS_PREFIX = "hls";
+const ASSET_PREFIX = "assets";
+// const HLS_PREFIX = "uploads/hls"; // 🎯 Change this from "hls" to "uploads/hls"
+// const ASSET_PREFIX = "uploads/assets"; // 🎯 Change this from "assets" to "uploads/assets"
 const DEFAULT_TTL_SECONDS = 600;
 const DEFAULT_STREAM_JWT_TTL_SECONDS = 60;
 const DEFAULT_PRESIGN_TTL_SECONDS = 10;
