@@ -7,10 +7,10 @@ const JWT_SECRET = process.env.JWT_SECRET || "change-me-in-prod";
 
 // Cookie Configuration Options Token Matrix
 const cookieOptions = {
-    httpOnly: true,                 // 🔒 Blocks JavaScript from reading the token (XSS Protection)
-    secure: process.env.NODE_ENV === "production", // Forces HTTPS usage in production environments
-    sameSite: "lax",                // Mitigates Cross-Site Request Forgery (CSRF) exploits
-    maxAge: 7 * 24 * 60 * 60 * 1000 // Expiration time matching JWT lifespan (7 days in milliseconds)
+    httpOnly: true,                 
+    secure: true,                   // ⚠️ CRITICAL: Must be explicitly true on Render for cross-site cookies
+    sameSite: "none",               // ⚠️ CRITICAL: Allows the cookie to travel from Vercel to Render
+    maxAge: 7 * 24 * 60 * 60 * 1000 
 };
 
 export const register = async (req, res) => {
