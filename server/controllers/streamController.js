@@ -136,6 +136,17 @@ export const getStreamPlaylist = asyncHandler(async (req, res) => {
         ? file.masterKey
         : `${HLS_PREFIX}/${file._id}/${playlistName}`;
 
+    // const response = await s3Client.send(
+    //     new GetObjectCommand({
+    //         Bucket: process.env.S3_BUCKET_NAME,
+    //         Key: key
+    //     })
+    // );
+    // const content = await streamToString(response.Body);
+    // const rewritten = rewritePlaylistWithTokenizedUrls(content, file._id, token);
+
+    // res.setHeader("Content-Type", getContentType(playlistName));
+    // res.status(200).send(rewritten);
     const response = await s3Client.send(
         new GetObjectCommand({
             Bucket: process.env.S3_BUCKET_NAME,
@@ -143,7 +154,12 @@ export const getStreamPlaylist = asyncHandler(async (req, res) => {
         })
     );
     const content = await streamToString(response.Body);
-    const rewritten = rewritePlaylistWithTokenizedUrls(content, file._id, token);
+    
+    // 🎯 Dynamically resolve the absolute host string (e.g. "https://videoflow-kfm3.onrender.com")
+    const hostUrl = `${req.protocol}://${req.get("host")}`;
+    
+    // Pass it down to the rewritten layout helper
+    const rewritten = rewritePlaylistWithTokenizedUrls(content, file._id, token, hostUrl);
 
     res.setHeader("Content-Type", getContentType(playlistName));
     res.status(200).send(rewritten);
