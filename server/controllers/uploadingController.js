@@ -934,7 +934,8 @@ export const streamUpload = asyncHandler(async (req, res) => {
             });
             await newFile.save();
 
-            await publishEvent("video.uploaded", {
+             try {
+                await publishEvent("video.uploaded", {
                 fileId: newFile._id.toString(),
                 s3Key: newFile.storedName,
                 originalName: newFile.originalName,
@@ -942,6 +943,12 @@ export const streamUpload = asyncHandler(async (req, res) => {
                 size: newFile.size,
                 uploadedAt: new Date().toISOString()
             });
+
+            console.log("✅ Event successfully accepted by video.events exchange!");
+                
+            } catch (amqpError) {
+                console.error("❌ Critical: Failed to route task to RabbitMQ:", amqpError.message);
+            }
 
             res.status(201).json({
                 message: 'Streamed file uploaded successfully!',
