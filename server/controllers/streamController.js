@@ -60,7 +60,32 @@ const verifyStreamToken = (token, fileId) => {
     }
 };
 
-const rewritePlaylistWithTokenizedUrls = (content, fileId, token) => {
+// const rewritePlaylistWithTokenizedUrls = (content, fileId, token) => {
+//     const basePrefix = `${HLS_PREFIX}/${fileId}/`;
+//     const lines = content.split(/\r?\n/);
+//     const rewritten = lines.map((line) => {
+//         const trimmed = line.trim();
+//         if (!trimmed || trimmed.startsWith("#")) {
+//             return line;
+//         }
+//         if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) {
+//             return line;
+//         }
+
+//         const normalized = trimmed.startsWith(basePrefix)
+//             ? trimmed.replace(basePrefix, "")
+//             : trimmed;
+//         if (normalized.endsWith(".m3u8")) {
+//             return `/stream/${fileId}/${normalized}?token=${token}`;
+//         } 
+//         return `/stream/${fileId}/asset/${normalized}?token=${token}`;
+//     });
+
+//     return rewritten.join("\n");
+// };
+
+// 🏎️ Update your helper to inject the backend host string dynamically
+const rewritePlaylistWithTokenizedUrls = (content, fileId, token, hostUrl) => {
     const basePrefix = `${HLS_PREFIX}/${fileId}/`;
     const lines = content.split(/\r?\n/);
     const rewritten = lines.map((line) => {
@@ -75,10 +100,12 @@ const rewritePlaylistWithTokenizedUrls = (content, fileId, token) => {
         const normalized = trimmed.startsWith(basePrefix)
             ? trimmed.replace(basePrefix, "")
             : trimmed;
+            
+        // 🎯 prepend the explicit full hostUrl path here:
         if (normalized.endsWith(".m3u8")) {
-            return `/stream/${fileId}/${normalized}?token=${token}`;
+            return `${hostUrl}/stream/${fileId}/${normalized}?token=${token}`;
         } 
-        return `/stream/${fileId}/asset/${normalized}?token=${token}`;
+        return `${hostUrl}/stream/${fileId}/asset/${normalized}?token=${token}`;
     });
 
     return rewritten.join("\n");
