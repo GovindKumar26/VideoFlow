@@ -153,6 +153,7 @@ app.use(cors({
 }));
 
 app.use(cookieParser());
+app.enable("trust proxy");
 app.use(express.json());
 app.use(express.static(path.join(__dirname, "public")));
 
