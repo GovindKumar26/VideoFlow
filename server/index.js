@@ -129,8 +129,10 @@ app.use(logger('dev'))
 
 const allowedOrigins = [
     'http://localhost:5173', 
-    'https://video-flow-kree2.vercel.app' // ⚠️ Double-check this matches your Vercel dashboard domain EXACTLY!
+    'https://video-flow-kree2.vercel.app',
+    'https://video-flow-murex.vercel.app' // ✨ Fixed: Authorized your active client origin
 ];
+
 
 app.use(cors({
     origin: function (origin, callback) {
