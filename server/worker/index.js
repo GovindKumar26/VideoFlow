@@ -7,7 +7,7 @@ import path from "node:path";
 import os from "node:os";
 import { spawn } from "node:child_process";
 import ffmpegPath from "ffmpeg-static";
-import s3Client from "../config/s3.js";
+import s3Client from "./s3Client.js";
 import { getRabbitChannel, rabbitConfig } from "../config/rabbitmq.js";
 import { publishEvent } from "../events/publisher.js";
 import sharp from "sharp";
@@ -87,8 +87,8 @@ const transcodeToHls = async (inputPath, outputDir) => {
     await ensureDir(outputDir);
 
     const tempPngLogoPath = path.join(os.tmpdir(), "videoflow-watermark.png");
-    await sharp(LOGO_ASSET_PATH)
-        .resize({ width: 320 }) // Give it a crisp resolution baseline before FFmpeg downsizes it
+    await sharp(LOGO_ASSET_PATH, { density: 300 })
+        .resize({ width: 160 }) // Render directly at target width with crisp high-DPI scaling
         .png()
         .toFile(tempPngLogoPath);
 
@@ -98,14 +98,14 @@ const transcodeToHls = async (inputPath, outputDir) => {
         const scaleFilter = `scale=w=${rendition.width}:h=${rendition.height}:force_original_aspect_ratio=decrease,scale=trunc(iw/2)*2:trunc(ih/2)*2`;
         const filterComplex = buildWatermarkedFilter(rendition);
 
-        const filterComplexString = `[0:v]${scaleFilter},drawbox=x=10:y=10:w=180:h=48:color=black@0.7:t=fill[scaled];[1:v]scale=160:-1[logo];[scaled][logo]overlay=20:14`;
+        const filterComplexString = `[0:v]${scaleFilter},drawbox=x=10:y=10:w=180:h=48:color=black@0.7:t=fill[scaled];[scaled][1:v]overlay=20:14`;
         const args = [
             "-y",
             "-i",
             inputPath,
             "-i", tempPngLogoPath,
             "-filter_complex",
-            `[0:v]${scaleFilter},drawbox=x=10:y=10:w=180:h=48:color=black@0.7:t=fill[scaled];[1:v]scale=160:-1[logo];[scaled][logo]overlay=20:14`,
+            `[0:v]${scaleFilter},drawbox=x=10:y=10:w=180:h=48:color=black@0.7:t=fill[scaled];[scaled][1:v]overlay=20:14`,
             
             "-c:a",
             "aac",
@@ -155,8 +155,8 @@ const transcodeToMp4Renditions = async (inputPath, outputDir) => {
     await ensureDir(outputDir);
 
     const tempPngLogoPath = path.join(os.tmpdir(), "videoflow-watermark-mp4.png");
-    await sharp(LOGO_ASSET_PATH)
-        .resize({ width: 320 })
+    await sharp(LOGO_ASSET_PATH, { density: 300 })
+        .resize({ width: 160 })
         .png()
         .toFile(tempPngLogoPath);
 
@@ -164,7 +164,7 @@ const transcodeToMp4Renditions = async (inputPath, outputDir) => {
         const outputPath = path.join(outputDir, `${rendition.name}.mp4`);
         const scaleFilter = `scale=w=${rendition.width}:h=${rendition.height}:force_original_aspect_ratio=decrease,scale=trunc(iw/2)*2:trunc(ih/2)*2`;
         const filterComplex = buildWatermarkedFilter(rendition);
-        const filterComplexString = `[0:v]${scaleFilter},drawbox=x=10:y=10:w=180:h=48:color=black@0.7:t=fill[scaled];[1:v]scale=160:-1[logo];[scaled][logo]overlay=20:14`;
+        const filterComplexString = `[0:v]${scaleFilter},drawbox=x=10:y=10:w=180:h=48:color=black@0.7:t=fill[scaled];[scaled][1:v]overlay=20:14`;
 
         const args = [
             "-y",
@@ -254,12 +254,14 @@ const uploadDirectoryToS3 = async (bucket, outputDir, outputPrefix) => {
         const key = `${outputPrefix}/${fileName}`;
         const body = createReadStream(filePath);
         const contentType = getContentType(fileName);
+        const { size } = await fs.stat(filePath);
 
         await s3Client.send(
             new PutObjectCommand({
                 Bucket: bucket,
                 Key: key,
                 Body: body,
+                ContentLength: size,
                 ContentType: contentType
             })
         );
@@ -272,11 +274,13 @@ const uploadDirectoryToS3 = async (bucket, outputDir, outputPrefix) => {
 
 const uploadFileToS3 = async (bucket, filePath, key, contentType) => {
     const body = createReadStream(filePath);
+    const { size } = await fs.stat(filePath);
     await s3Client.send(
         new PutObjectCommand({
             Bucket: bucket,
             Key: key,
             Body: body,
+            ContentLength: size,
             ContentType: contentType
         })
     );
@@ -337,6 +341,8 @@ const startWorker = async () => {
             const assetsDir = path.join(baseDir, "assets");
             const thumbnailPath = path.join(assetsDir, "thumbnail.jpg");
             const previewPath = path.join(assetsDir, "preview.mp4");
+
+            await ensureDir(assetsDir);
 
             await generateThumbnail(inputPath, thumbnailPath);
             console.log("Thumbnail generated");
