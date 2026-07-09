@@ -20,7 +20,8 @@ s3_client = boto3.client(
 
 # 2. Initialize the highly optimized open-source Turbo model with 8-bit integer quantization
 print("🔄 Loading Faster-Whisper Turbo engine weights...")
-whisper_model = WhisperModel("turbo", device="cpu", compute_type="int8")
+whisper_model = WhisperModel("small", device="cpu", compute_type="int8")
+
 print("🚀 Subtitle engine model loaded successfully and waiting for event signals.")
 
 def format_vtt_time(seconds):
