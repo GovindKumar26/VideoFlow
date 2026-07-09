@@ -16,9 +16,12 @@ WORKDIR /app
 COPY server/package*.json ./server/
 RUN cd server && npm ci --omit=dev
 
+
+
 # 3. Copy and install your Python Whisper worker dependencies
 # Using --break-system-packages is required by modern Debian/Ubuntu bases inside safe Docker containers
-COPY server/worker/ai-worker/requirements.txt ./temp_requirements.txt
+# 🎯 Search flexibly for requirements.txt inside the repository context
+COPY **/requirements.txt ./temp_requirements.txt
 RUN pip3 install --no-cache-dir --break-system-packages -r temp_requirements.txt && rm temp_requirements.txt
 
 # 4. Copy your monorepo code directories
