@@ -1,10 +1,10 @@
 import dotenv from "dotenv";
 import { createReadStream } from 'fs';
 import { GetObjectCommand } from "@aws-sdk/client-s3";
-import fsExtra from 'fs-extra';
+
 import { pipeline } from "node:stream/promises";
 import { createWriteStream } from "node:fs";
-import { promises as fs } from "node:fs";
+import { promises as fs, statSync } from "node:fs";
 import path from "node:path";
 import os from "node:os";
 import { spawn } from "node:child_process";
@@ -15,6 +15,7 @@ import { publishEvent } from "../events/publisher.js";
 import sharp from "sharp";
 import { fileURLToPath } from "node:url";
 import { putFileToS3 } from "./s3Upload.js";
+
 
 dotenv.config();
 
@@ -278,7 +279,8 @@ const uploadDirectoryToS3 = async (bucket, outputDir, outputPrefix) => {
             const key = `${outputPrefix}/${fileName}`;
             const body = createReadStream(filePath);
             const contentType = getContentType(fileName);
-            const fileStats = fsExtra.statSync(filePath);
+          
+            const fileStats = statSync(filePath);
 
             await s3Client.send(
                 new PutObjectCommand({
