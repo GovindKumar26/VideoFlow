@@ -1,7 +1,7 @@
 import dotenv from "dotenv";
-import { GetObjectCommand, PutObjectCommand } from "@aws-sdk/client-s3";
+import { GetObjectCommand } from "@aws-sdk/client-s3";
 import { pipeline } from "node:stream/promises";
-import { createWriteStream, createReadStream } from "node:fs";
+import { createWriteStream } from "node:fs";
 import { promises as fs } from "node:fs";
 import path from "node:path";
 import os from "node:os";
@@ -12,6 +12,7 @@ import { getRabbitChannel, rabbitConfig } from "../config/rabbitmq.js";
 import { publishEvent } from "../events/publisher.js";
 import File from "../models/file.js";
 import dbConnect from "../config/database.js";
+import { putFileToS3 } from "./s3Upload.js";
 
 dotenv.config();
 
@@ -40,15 +41,7 @@ const downloadFromS3 = async (bucket, key, destination) => {
 };
 
 const uploadFileToS3 = async (bucket, filePath, key, contentType) => {
-    const body = createReadStream(filePath);
-    await s3Client.send(
-        new PutObjectCommand({
-            Bucket: bucket,
-            Key: key,
-            Body: body,
-            ContentType: contentType
-        })
-    );
+    await putFileToS3(bucket, filePath, key, contentType);
 };
 
 // 🎯 Highly optimized native child process execution layer with real-time feedback

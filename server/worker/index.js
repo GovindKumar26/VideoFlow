@@ -1,7 +1,7 @@
 import dotenv from "dotenv";
-import { GetObjectCommand, PutObjectCommand } from "@aws-sdk/client-s3";
+import { GetObjectCommand } from "@aws-sdk/client-s3";
 import { pipeline } from "node:stream/promises";
-import { createWriteStream, createReadStream } from "node:fs";
+import { createWriteStream } from "node:fs";
 import { promises as fs } from "node:fs";
 import path from "node:path";
 import os from "node:os";
@@ -12,6 +12,7 @@ import { getRabbitChannel, rabbitConfig } from "../config/rabbitmq.js";
 import { publishEvent } from "../events/publisher.js";
 import sharp from "sharp";
 import { fileURLToPath } from "node:url";
+import { putFileToS3 } from "./s3Upload.js";
 
 dotenv.config();
 
@@ -256,19 +257,9 @@ const uploadDirectoryToS3 = async (bucket, outputDir, outputPrefix) => {
     for (const fileName of fileNames) {
         const filePath = path.join(outputDir, fileName);
         const key = `${outputPrefix}/${fileName}`;
-        const body = createReadStream(filePath);
         const contentType = getContentType(fileName);
-        const { size } = await fs.stat(filePath);
 
-        await s3Client.send(
-            new PutObjectCommand({
-                Bucket: bucket,
-                Key: key,
-                Body: body,
-                ContentLength: size,
-                ContentType: contentType
-            })
-        );
+        await putFileToS3(bucket, filePath, key, contentType);
 
         uploadedKeys.push(key);
     }
@@ -277,17 +268,7 @@ const uploadDirectoryToS3 = async (bucket, outputDir, outputPrefix) => {
 };
 
 const uploadFileToS3 = async (bucket, filePath, key, contentType) => {
-    const body = createReadStream(filePath);
-    const { size } = await fs.stat(filePath);
-    await s3Client.send(
-        new PutObjectCommand({
-            Bucket: bucket,
-            Key: key,
-            Body: body,
-            ContentLength: size,
-            ContentType: contentType
-        })
-    );
+    await putFileToS3(bucket, filePath, key, contentType);
 };
 
 const ensureDlq = async (channel) => {
