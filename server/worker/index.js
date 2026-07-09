@@ -254,14 +254,44 @@ const uploadDirectoryToS3 = async (bucket, outputDir, outputPrefix) => {
     const fileNames = await fs.readdir(outputDir);
     const uploadedKeys = [];
 
-    for (const fileName of fileNames) {
-        const filePath = path.join(outputDir, fileName);
-        const key = `${outputPrefix}/${fileName}`;
-        const contentType = getContentType(fileName);
+    const BATCH_SIZE = 4;
 
-        await putFileToS3(bucket, filePath, key, contentType);
+    // for (const fileName of fileNames) {
+    //     const filePath = path.join(outputDir, fileName);
+    //     const key = `${outputPrefix}/${fileName}`;
+    //     const contentType = getContentType(fileName);
 
-        uploadedKeys.push(key);
+    //     await putFileToS3(bucket, filePath, key, contentType);
+
+    //     uploadedKeys.push(key);
+    // }
+
+
+    for (let i = 0; i < fileNames.length; i += BATCH_SIZE) {
+        const batch = fileNames.slice(i, i + BATCH_SIZE);
+        
+        // Execute a small batch in parallel, then await completion before starting the next batch
+        await Promise.all(batch.map(async (fileName) => {
+            const filePath = path.join(outputDir, fileName);
+            const key = `${outputPrefix}/${fileName}`;
+            const body = createReadStream(filePath);
+            const contentType = getContentType(fileName);
+            const fileStats = fsExtra.statSync(filePath);
+
+            await s3Client.send(
+                new PutObjectCommand({
+                    Bucket: bucket,
+                    Key: key,
+                    Body: body,
+                    ContentType: contentType,
+                    ContentLength: fileStats.size
+                })
+            );
+
+            uploadedKeys.push(key);
+        }));
+        
+        console.log(`📦 Processed batch ${Math.floor(i / BATCH_SIZE) + 1} of HLS fragments...`);
     }
 
     return uploadedKeys;

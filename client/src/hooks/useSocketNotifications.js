@@ -1,4 +1,4 @@
-// 🎯 UPDATE src/hooks/useSocketNotifications.js
+// UPDATE src/hooks/useSocketNotifications.js
 import { useEffect } from "react";
 import { io } from "socket.io-client";
 import { toast } from "sonner";

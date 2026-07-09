@@ -12,7 +12,9 @@ const s3Client = new S3Client({
         accessKeyId: process.env.S3_ACCESS_KEY,
         secretAccessKey: process.env.S3_SECRET_KEY,
     },
-    forcePathStyle: true, // This is important for MinIO
+    forcePathStyle: false, // This is important for MinIO
+    maxAttempts: 4
+
 });
 
 export default s3Client;

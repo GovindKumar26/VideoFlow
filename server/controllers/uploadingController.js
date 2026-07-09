@@ -196,6 +196,7 @@ export const getFile = asyncHandler(async (req, res) => {
             thumbnailUrl: thumbnailUrl,
             previewKey: file.previewKey,
             previewUrl: previewUrl,
+            subtitles: file.subtitles || [],
             lastError: file.lastError,
             uploadDate: file.uploadDate,
             exports: file.exports || [],
@@ -276,6 +277,7 @@ export const getPlaybackInfo = asyncHandler(async (req, res) => {
         playbackUrl,
         thumbnailUrl,
         previewUrl,
+        subtitles: file.subtitles || [],
         masterKey: `hls/${file._id}/master.m3u8`
     });
 });
@@ -475,7 +477,7 @@ export const getWatchPage = asyncHandler(async (req, res) => {
         
         /* 🎯 BOUNDARY BOX: Holds the player canvas rigidly */
         .video-container { position: relative; width: 100%; max-height: 70vh; border-radius: 14px; overflow: hidden; background: #000; border: 1px solid #273155; }
-        video { width: 100%; height: 100%; object-fit: contain; display: block; }
+        video { width: 100%; height: 100%; object-fit: contain; display: block; position: relative; z-index: 1; }
         
         /* 🎯 THE MATRIX CANVAS CONTAINER */
         #watermark-overlay-matrix {
@@ -487,11 +489,12 @@ export const getWatchPage = asyncHandler(async (req, res) => {
             display: grid;
             grid-template-columns: repeat(3, 1fr); /* 3 clean columns */
             grid-template-rows: repeat(3, 1fr);    /* 3 clean rows */
-            pointer-events: none;
-            user-select: none;
-            z-index: 10;
+            pointer-events: none !important;
+            user-select: none !important;
+            z-index: 2147483647 !important; /* Forces watermark on top of video element in fullscreen */
             transform: rotate(-15deg); /* Tilted exactly to design spec */
-            opacity: 0.14; 
+            opacity: 0.14 !important; 
+            mix-blend-mode: overlay;
             transition: transform 0.5s ease-in-out;
         }
         
@@ -500,12 +503,14 @@ export const getWatchPage = asyncHandler(async (req, res) => {
             display: flex;
             align-items: center;
             justify-content: center;
-            font-family: monospace;
-            font-size: 13px;
-            color: #eef2ff;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+            font-size: clamp(10px, 1.1vw, 14px);
+            color: #eef2ff !important;
             white-space: pre-line;
             text-align: center;
-            text-shadow: 1px 1px 2px rgba(0,0,0,0.9);
+            text-shadow: 1px 1px 3px rgba(0,0,0,0.9), -1px -1px 3px rgba(0,0,0,0.9);
+            font-weight: 600;
+            letter-spacing: 0.5px;
         }
 
         a { color: #8ab4ff; text-decoration: none; }
@@ -522,6 +527,44 @@ export const getWatchPage = asyncHandler(async (req, res) => {
         .btn-download:hover { background: #25356c; border-color: #38497f; transform: translateY(-1px); }
         .btn-download.studio-cut { background: #0a3625; border-color: #145239; }
         .btn-download.studio-cut:hover { background: #114c35; border-color: #1b6b4b; }
+
+        /* 🎯 FULLSCREEN PLAYER CONTAINER OVERRIDES */
+        .video-container:fullscreen {
+            width: 100vw !important;
+            height: 100vh !important;
+            max-width: none !important;
+            max-height: none !important;
+            background: #000 !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            border: none !important;
+            border-radius: 0 !important;
+        }
+        .video-container:-webkit-full-screen {
+            width: 100vw !important;
+            height: 100vh !important;
+            max-width: none !important;
+            max-height: none !important;
+            background: #000 !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            border: none !important;
+            border-radius: 0 !important;
+        }
+        .video-container:fullscreen video {
+            width: 100% !important;
+            height: 100% !important;
+            max-height: 100vh !important;
+            object-fit: contain !important;
+        }
+        .video-container:-webkit-full-screen video {
+            width: 100% !important;
+            height: 100% !important;
+            max-height: 100vh !important;
+            object-fit: contain !important;
+        }
     </style>
 </head>
 <body>
@@ -558,12 +601,14 @@ export const getWatchPage = asyncHandler(async (req, res) => {
     <script src="https://cdn.jsdelivr.net/npm/hls.js@1.5.15/dist/hls.min.js"></script>
     <script>
         const video = document.getElementById("video");
+        const container = document.querySelector(".video-container");
         const sourceUrl = "${playbackUrl}";
 
         if (window.Hls && Hls.isSupported()) {
             const hls = new Hls();
             hls.loadSource(sourceUrl);
             hls.attachMedia(video);
+            window.hlsInstance = hls; // Keep reference to destroy if tampered
         } else if (video.canPlayType("application/vnd.apple.mpegurl")) {
             video.src = sourceUrl;
         }
@@ -593,17 +638,142 @@ export const getWatchPage = asyncHandler(async (req, res) => {
         positionJitterMatrix();
         setInterval(positionJitterMatrix, 6000);
 
-        const container = document.querySelector(".video-container");
-        // 🛡️ DOM TAMPERING INSPECTION WATCHDOG
-        const observer = new MutationObserver(() => {
-            const matrixCheck = document.getElementById("watermark-overlay-matrix");
-            if (!matrixCheck || parseFloat(window.getComputedStyle(matrixCheck).opacity) < 0.05) {
-                video.pause();
-                alert("Security policy violation detected.");
-                window.location.reload();
+        // 🎯 FULLSCREEN EVENT REDIRECTION & INTEGRATION
+        const getFullscreenElement = () => {
+            return document.fullscreenElement || 
+                   document.webkitFullscreenElement || 
+                   document.mozFullScreenElement || 
+                   document.msFullscreenElement;
+        };
+
+        const enterFullscreen = (elem) => {
+            const fn = elem.requestFullscreen || 
+                       elem.webkitRequestFullscreen || 
+                       elem.mozRequestFullScreen || 
+                       elem.msRequestFullscreen;
+            if (fn) fn.call(elem).catch(err => console.error("Fullscreen request failed:", err));
+        };
+
+        const exitFullscreen = () => {
+            const fn = document.exitFullscreen || 
+                       document.webkitExitFullscreen || 
+                       document.mozCancelFullScreen || 
+                       document.msExitFullscreen;
+            if (fn) fn.call(document).catch(err => console.error("Exit fullscreen failed:", err));
+        };
+
+        const handleFullscreenChange = () => {
+            const fsEl = getFullscreenElement();
+            if (fsEl === video) {
+                // If video goes fullscreen directly, exit it and redirect to container
+                exitFullscreen();
+                enterFullscreen(container);
+            }
+        };
+
+        document.addEventListener("fullscreenchange", handleFullscreenChange);
+        document.addEventListener("webkitfullscreenchange", handleFullscreenChange);
+        document.addEventListener("mozfullscreenchange", handleFullscreenChange);
+        document.addEventListener("MSFullscreenChange", handleFullscreenChange);
+
+        // Toggle container fullscreen on double-click
+        container.addEventListener("dblclick", (e) => {
+            e.preventDefault();
+            if (!getFullscreenElement()) {
+                enterFullscreen(container);
+            } else {
+                exitFullscreen();
             }
         });
-        observer.observe(container, { attributes: true, childList: true, subtree: true });
+
+        // 🛡️ HARDENED SECURITY WATCHDOG: Monitors DOM integrity and styles of the watermark
+        const watchdog = () => {
+            const matrixCheck = document.getElementById("watermark-overlay-matrix");
+            
+            // 1. Ensure the matrix element exists in DOM
+            if (!matrixCheck) {
+                terminateStream("Watermark container removed from DOM.");
+                return;
+            }
+            
+            // 2. Ensure matrix is a direct child of container
+            if (matrixCheck.parentNode !== container) {
+                terminateStream("Watermark hierarchy tampered.");
+                return;
+            }
+            
+            // 3. Check matrix styles
+            const matrixStyle = window.getComputedStyle(matrixCheck);
+            const opacity = parseFloat(matrixStyle.opacity);
+            const display = matrixStyle.display;
+            const visibility = matrixStyle.visibility;
+            const pointerEvents = matrixStyle.pointerEvents;
+            const zIndex = parseInt(matrixStyle.zIndex, 10);
+            
+            // Check computed visibility / opacity / display
+            if (opacity < 0.05 || display === "none" || visibility === "hidden" || pointerEvents !== "none" || zIndex < 10) {
+                terminateStream("Watermark styles obfuscated.");
+                return;
+            }
+            
+            // 4. Ensure there are exactly 9 cells
+            const cells = matrixCheck.querySelectorAll(".matrix-cell");
+            if (cells.length !== 9) {
+                terminateStream("Watermark grid cells modified.");
+                return;
+            }
+            
+            // 5. Check each cell's style and text integrity
+            const expectedText = "Viewer:"; 
+            for (let i = 0; i < cells.length; i++) {
+                const cell = cells[i];
+                const cellStyle = window.getComputedStyle(cell);
+                
+                if (cellStyle.display === "none" || cellStyle.visibility === "hidden" || parseFloat(cellStyle.opacity) === 0) {
+                    terminateStream("Watermark cell hidden.");
+                    return;
+                }
+                
+                // Color checks: ensure it is not transparent
+                const colorStr = cellStyle.color.replace(/\s+/g, "");
+                if (colorStr === "transparent" || colorStr === "rgba(0,0,0,0)") {
+                    terminateStream("Watermark cell color tampered.");
+                    return;
+                }
+                
+                // Content check
+                if (!cell.innerText.includes(expectedText) || !cell.innerText.includes("IP:")) {
+                    terminateStream("Watermark content modified.");
+                    return;
+                }
+            }
+        };
+
+        function terminateStream(reason) {
+            console.error("Security policy violation:", reason);
+            // Pause video and break source stream
+            video.pause();
+            if (window.hlsInstance) {
+                window.hlsInstance.destroy();
+            }
+            video.removeAttribute("src");
+            video.load();
+
+            // Clear container and show un-bypassable warning card
+            container.innerHTML = \`<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;width:100%;height:100%;min-height:300px;background:#000;color:#ff4a4a;font-family:monospace;font-size:14px;font-weight:bold;text-align:center;padding:20px;box-sizing:border-box;border:2px solid #ff4a4a;border-radius:10px;">
+                <h3 style="margin:0 0 10px 0;font-size:18px;">SECURITY POLICY VIOLATION</h3>
+                <p style="margin:0;color:#8592b0;font-size:13px;font-weight:normal;line-height:1.5;">Playback disabled: \${reason}</p>
+            </div>\`;
+        }
+
+        // Run verification using MutationObserver for real-time reactivity
+        const observer = new MutationObserver(() => {
+            watchdog();
+        });
+        observer.observe(container, { attributes: true, childList: true, subtree: true, characterData: true });
+        
+        // Secondary backup check every 1 second (in case observer is disconnected/bypassed)
+        setInterval(watchdog, 1000);
 
         async function triggerDownload(apiUrl) {
             try {
@@ -736,25 +906,54 @@ export const getEmbedPage = asyncHandler(async (req, res) => {
             display: grid; 
             grid-template-columns: repeat(3, 1fr); 
             grid-template-rows: repeat(3, 1fr);
-            z-index: 10; 
+            z-index: 2147483647 !important; /* Max z-index overlay */
             transform: rotate(-15deg);
-            opacity: 0.14; 
+            opacity: 0.14 !important; 
+            mix-blend-mode: overlay;
             transition: transform 0.5s ease-in-out;
-            
-            /* 🚀 THE CRITICAL PASSTHROUGH SHORTCUTS: Bleeds mouse events directly down to native elements */
-            pointer-events: none; 
-            user-select: none; 
+            pointer-events: none !important; 
+            user-select: none !important; 
         }
         
         .matrix-cell { 
             display: flex; 
             align-items: center; 
             justify-content: center; 
-            font-family: monospace; 
-            font-size: 13px; 
-            color: #eef2ff; 
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+            font-size: clamp(10px, 1.1vw, 14px);
+            color: #eef2ff !important; 
             text-align: center; 
-            text-shadow: 1px 1px 3px rgba(0,0,0,0.9); 
+            text-shadow: 1px 1px 3px rgba(0,0,0,0.9), -1px -1px 3px rgba(0,0,0,0.9); 
+            font-weight: 600;
+            letter-spacing: 0.5px;
+        }
+
+        /* 🎯 FULLSCREEN PLAYER CONTAINER OVERRIDES */
+        .video-container:fullscreen {
+            width: 100vw !important;
+            height: 100vh !important;
+            background: #000 !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+        }
+        .video-container:-webkit-full-screen {
+            width: 100vw !important;
+            height: 100vh !important;
+            background: #000 !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+        }
+        .video-container:fullscreen video {
+            width: 100% !important;
+            height: 100% !important;
+            object-fit: contain !important;
+        }
+        .video-container:-webkit-full-screen video {
+            width: 100% !important;
+            height: 100% !important;
+            object-fit: contain !important;
         }
     </style>
 </head>
@@ -767,6 +966,7 @@ export const getEmbedPage = asyncHandler(async (req, res) => {
     <script src="https://cdn.jsdelivr.net/npm/hls.js@1.5.15/dist/hls.min.js"></script>
     <script>
         const video = document.getElementById("video");
+        const container = document.querySelector(".video-container");
         const sourceUrl = "${playbackUrl}";
 
         // Initialize Native or fallback HLS Engine pipeline
@@ -774,6 +974,7 @@ export const getEmbedPage = asyncHandler(async (req, res) => {
             const hls = new Hls();
             hls.loadSource(sourceUrl);
             hls.attachMedia(video);
+            window.hlsInstance = hls;
         } else if (video.canPlayType("application/vnd.apple.mpegurl")) {
             video.src = sourceUrl;
         }
@@ -798,16 +999,139 @@ export const getEmbedPage = asyncHandler(async (req, res) => {
         positionJitterMatrix();
         setInterval(positionJitterMatrix, 6000);
 
-        // 🛡️ SECURITY WATCHDOG MUTATION WATCHER
-        const observer = new MutationObserver(() => {
-            const matrixCheck = document.getElementById("watermark-overlay-matrix");
-            // Check if element was ripped from DOM trees or obfuscated visually via styles
-            if (!matrixCheck || parseFloat(window.getComputedStyle(matrixCheck).opacity) < 0.05) {
-                video.pause();
-                window.location.reload();
+        // 🎯 FULLSCREEN EVENT REDIRECTION & INTEGRATION
+        const getFullscreenElement = () => {
+            return document.fullscreenElement || 
+                   document.webkitFullscreenElement || 
+                   document.mozFullScreenElement || 
+                   document.msFullscreenElement;
+        };
+
+        const enterFullscreen = (elem) => {
+            const fn = elem.requestFullscreen || 
+                       elem.webkitRequestFullscreen || 
+                       elem.mozRequestFullScreen || 
+                       elem.msRequestFullscreen;
+            if (fn) fn.call(elem).catch(err => console.error("Fullscreen request failed:", err));
+        };
+
+        const exitFullscreen = () => {
+            const fn = document.exitFullscreen || 
+                       document.webkitExitFullscreen || 
+                       document.mozCancelFullScreen || 
+                       document.msExitFullscreen;
+            if (fn) fn.call(document).catch(err => console.error("Exit fullscreen failed:", err));
+        };
+
+        const handleFullscreenChange = () => {
+            const fsEl = getFullscreenElement();
+            if (fsEl === video) {
+                // If video goes fullscreen directly, exit it and redirect to container
+                exitFullscreen();
+                enterFullscreen(container);
+            }
+        };
+
+        document.addEventListener("fullscreenchange", handleFullscreenChange);
+        document.addEventListener("webkitfullscreenchange", handleFullscreenChange);
+        document.addEventListener("mozfullscreenchange", handleFullscreenChange);
+        document.addEventListener("MSFullscreenChange", handleFullscreenChange);
+
+        // Toggle container fullscreen on double-click
+        container.addEventListener("dblclick", (e) => {
+            e.preventDefault();
+            if (!getFullscreenElement()) {
+                enterFullscreen(container);
+            } else {
+                exitFullscreen();
             }
         });
-        observer.observe(document.querySelector(".video-container"), { attributes: true, childList: true, subtree: true });
+
+        // 🛡️ HARDENED SECURITY WATCHDOG: Monitors DOM integrity and styles of the watermark
+        const watchdog = () => {
+            const matrixCheck = document.getElementById("watermark-overlay-matrix");
+            
+            // 1. Ensure the matrix element exists
+            if (!matrixCheck) {
+                terminateStream("Watermark container removed from DOM.");
+                return;
+            }
+            
+            // 2. Ensure matrix is a direct child of container
+            if (matrixCheck.parentNode !== container) {
+                terminateStream("Watermark hierarchy tampered.");
+                return;
+            }
+            
+            // 3. Check matrix styles
+            const matrixStyle = window.getComputedStyle(matrixCheck);
+            const opacity = parseFloat(matrixStyle.opacity);
+            const display = matrixStyle.display;
+            const visibility = matrixStyle.visibility;
+            const pointerEvents = matrixStyle.pointerEvents;
+            const zIndex = parseInt(matrixStyle.zIndex, 10);
+            
+            if (opacity < 0.05 || display === "none" || visibility === "hidden" || pointerEvents !== "none" || zIndex < 10) {
+                terminateStream("Watermark styles obfuscated.");
+                return;
+            }
+            
+            // 4. Ensure there are exactly 9 cells
+            const cells = matrixCheck.querySelectorAll(".matrix-cell");
+            if (cells.length !== 9) {
+                terminateStream("Watermark grid cells modified.");
+                return;
+            }
+            
+            // 5. Check each cell's style and text integrity
+            const expectedText = "Viewer:"; 
+            for (let i = 0; i < cells.length; i++) {
+                const cell = cells[i];
+                const cellStyle = window.getComputedStyle(cell);
+                
+                if (cellStyle.display === "none" || cellStyle.visibility === "hidden" || parseFloat(cellStyle.opacity) === 0) {
+                    terminateStream("Watermark cell hidden.");
+                    return;
+                }
+                
+                // Color checks: ensure it is not transparent
+                const colorStr = cellStyle.color.replace(/\s+/g, "");
+                if (colorStr === "transparent" || colorStr === "rgba(0,0,0,0)") {
+                    terminateStream("Watermark cell color tampered.");
+                    return;
+                }
+                
+                // Content check
+                if (!cell.innerText.includes(expectedText) || !cell.innerText.includes("IP:")) {
+                    terminateStream("Watermark content modified.");
+                    return;
+                }
+            }
+        };
+
+        function terminateStream(reason) {
+            console.error("Security policy violation:", reason);
+            video.pause();
+            if (window.hlsInstance) {
+                window.hlsInstance.destroy();
+            }
+            video.removeAttribute("src");
+            video.load();
+
+            container.innerHTML = \`<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;width:100%;height:100%;background:#000;color:#ff4a4a;font-family:monospace;font-size:14px;font-weight:bold;text-align:center;padding:20px;box-sizing:border-box;border:2px solid #ff4a4a;border-radius:10px;">
+                <h3 style="margin:0 0 10px 0;font-size:18px;">SECURITY POLICY VIOLATION</h3>
+                <p style="margin:0;color:#8592b0;font-size:13px;font-weight:normal;line-height:1.5;">Playback disabled: \${reason}</p>
+            </div>\`;
+        }
+
+        // Run verification using MutationObserver for real-time reactivity
+        const observer = new MutationObserver(() => {
+            watchdog();
+        });
+        observer.observe(container, { attributes: true, childList: true, subtree: true, characterData: true });
+        
+        // Secondary backup check every 1 second (in case observer is disconnected/bypassed)
+        setInterval(watchdog, 1000);
     </script>
 </body>
 </html>`);

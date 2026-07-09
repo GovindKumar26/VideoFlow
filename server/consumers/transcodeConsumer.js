@@ -3,6 +3,10 @@ import File from "../models/file.js";
 import { createAndEmitNotification } from "../services/notificationService.js";
 import { dispatchEventForUser } from "../services/webhookDeliveryService.js";
 
+
+const SUBTITLES_READY_QUEUE = "video.subtitles_ready";
+const ROUTING_KEY_SUBTITLES_READY = "video.subtitles_ready";
+
 const TRANSCODED_QUEUE = "video.transcoded";
 const FAILED_QUEUE = "video.failed";
 const PROCESSING_QUEUE = "video.processing";
@@ -203,6 +207,73 @@ export const startProcessingConsumer = async () => {
             channel.ack(msg);
         } catch (error) {
             console.error("Failed to process video.processing event:", error);
+            channel.nack(msg, false, false);
+        }
+    });
+};
+
+
+
+export const startSubtitlesReadyConsumer = async () => {
+    const channel = await getRabbitChannel();
+
+    // 1. Ensure resilience configurations line up with your existing DLQ handling
+    await ensureDlq(channel);
+    await channel.assertQueue(SUBTITLES_READY_QUEUE, queueOptions);
+    await channel.bindQueue(SUBTITLES_READY_QUEUE, rabbitConfig.exchange, ROUTING_KEY_SUBTITLES_READY);
+    channel.prefetch(1);
+
+    console.log("📢 Node Subtitles Consumer successfully listening for video.subtitles_ready queue...");
+
+    channel.consume(SUBTITLES_READY_QUEUE, async (msg) => {
+        if (!msg) {
+            return;
+        }
+
+        try {
+            const content = JSON.parse(msg.content.toString());
+            const { payload } = content;
+            const { fileId, subtitles } = payload;
+
+            console.log(`📥 Received subtitles ready payload for fileId: ${fileId}`);
+
+            // 2. Push the generated WebVTT track structure into your Mongoose File document
+            const updatedFile = await File.findByIdAndUpdate(
+                fileId,
+                {
+                    $set: { subtitles: Array.isArray(subtitles) ? subtitles : [] }
+                },
+                { returnDocument: "after" }
+            );
+
+            // 3. Optional: Trigger your native services to alert the client app over WebSockets
+            const fileDoc = await File.findById(fileId).select("owner originalName");
+            if (fileDoc?.owner) {
+                await createAndEmitNotification({
+                    userId: fileDoc.owner,
+                    title: "Subtitles Generated",
+                    message: `AI captions have been added to ${fileDoc.originalName}.`,
+                    type: "info",
+                    data: { fileId, event: "video.subtitles_ready" }
+                });
+
+                await dispatchEventForUser({
+                    userId: fileDoc.owner,
+                    event: "video.subtitles_ready",
+                    payload: {
+                        fileId,
+                        event: "video.subtitles_ready",
+                        subtitles: updatedFile.subtitles
+                    }
+                });
+            }
+
+            // 4. Safely remove the handled message item from your RabbitMQ exchange
+            channel.ack(msg);
+            console.log(`✅ Subtitles safely synchronized in MongoDB for fileId: ${fileId}`);
+        } catch (error) {
+            console.error("Failed to process video.subtitles_ready event:", error);
+            // Requeues to DLQ if your structural constraints throw exceptions
             channel.nack(msg, false, false);
         }
     });

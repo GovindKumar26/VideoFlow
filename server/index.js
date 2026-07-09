@@ -11,7 +11,7 @@ import dotenv from "dotenv";
 import cors from "cors";
 import dbConnect from "./config/database.js";
 import errorHandler from "./middlewares/errorHandler.js";
-import { startTranscodeConsumer, startFailedConsumer, startProcessingConsumer } from "./consumers/transcodeConsumer.js";
+import { startTranscodeConsumer, startFailedConsumer, startProcessingConsumer, startSubtitlesReadyConsumer } from "./consumers/transcodeConsumer.js";
 import path from "path";
 import { fileURLToPath } from "url";
 import { createServer } from "http";
@@ -197,6 +197,7 @@ const startServer = async () => {
     await startTranscodeConsumer();
     await startFailedConsumer();
     await startProcessingConsumer();
+    await startSubtitlesReadyConsumer();
 
     server.listen(PORT, () => {
       console.log(`server running on port : ${PORT}`);

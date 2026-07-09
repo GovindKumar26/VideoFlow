@@ -15,4 +15,4 @@ RUN npm install --production
 COPY . .
 
 # 6. Execute your engine initializer script
-CMD ["node", "initializeEngine.js"]
+CMD ["node", "start.js"]
