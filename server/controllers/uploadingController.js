@@ -426,6 +426,24 @@ export const getWatchPage = asyncHandler(async (req, res) => {
         ? `${protocol}://${host}/stream/assets/${file._id}/${file.previewKey.split("/").pop()}?token=${streamToken}`
         : null;
 
+    // 🎯 ASSEMBLE SUBTITLE TRACKS HTML
+    let tracksHtml = "";
+    if (Array.isArray(file.subtitles)) {
+        file.subtitles.forEach((track, index) => {
+            const fileName = track.key.split("/").pop();
+            const trackUrl = `${protocol}://${host}/stream/assets/${file._id}/${fileName}?token=${streamToken}`;
+            tracksHtml += `
+                <track
+                    kind="subtitles"
+                    src="${trackUrl}"
+                    srclang="${track.lang || "en"}"
+                    label="${track.lang === "en" ? "English AI" : (track.lang || "Subtitle")}"
+                    ${index === 0 ? "default" : ""}
+                />
+            `;
+        });
+    }
+
     // 🎯 ASSEMBLE DOWNLOAD BUTTON ELEMENTS ON THE FLY
     let downloadButtonsHtml = "";
 
@@ -574,7 +592,9 @@ export const getWatchPage = asyncHandler(async (req, res) => {
             
             <div class="video-container">
                 <div id="watermark-overlay-matrix"></div>
-                <video id="video" controls playsinline poster="${thumbnailUrl || ""}"></video>
+                <video id="video" controls playsinline crossorigin="use-credentials" poster="${thumbnailUrl || ""}">
+                    ${tracksHtml}
+                </video>
             </div>
             
             <div class="download-section">
@@ -880,6 +900,24 @@ export const getEmbedPage = asyncHandler(async (req, res) => {
         ? `${protocol}://${host}/stream/assets/${file._id}/${file.thumbnailKey.split("/").pop()}?token=${streamToken}`
         : null;
 
+    // 🎯 ASSEMBLE SUBTITLE TRACKS HTML
+    let tracksHtml = "";
+    if (Array.isArray(file.subtitles)) {
+        file.subtitles.forEach((track, index) => {
+            const fileName = track.key.split("/").pop();
+            const trackUrl = `${protocol}://${host}/stream/assets/${file._id}/${fileName}?token=${streamToken}`;
+            tracksHtml += `
+                <track
+                    kind="subtitles"
+                    src="${trackUrl}"
+                    srclang="${track.lang || "en"}"
+                    label="${track.lang === "en" ? "English AI" : (track.lang || "Subtitle")}"
+                    ${index === 0 ? "default" : ""}
+                />
+            `;
+        });
+    }
+
     res.setHeader("Content-Type", "text/html; charset=utf-8");
     res.status(200).send(`<!doctype html>
 <html lang="en">
@@ -960,7 +998,9 @@ export const getEmbedPage = asyncHandler(async (req, res) => {
 <body>
     <div class="video-container">
         <div id="watermark-overlay-matrix"></div>
-        <video id="video" controls playsinline controlsList="nodownload" poster="${thumbnailUrl || ""}"></video>
+        <video id="video" controls playsinline controlsList="nodownload" crossorigin="use-credentials" poster="${thumbnailUrl || ""}">
+            ${tracksHtml}
+        </video>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/hls.js@1.5.15/dist/hls.min.js"></script>
