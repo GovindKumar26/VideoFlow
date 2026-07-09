@@ -1,6 +1,7 @@
 import dotenv from "dotenv";
 import { createReadStream } from 'fs';
 import { GetObjectCommand } from "@aws-sdk/client-s3";
+import fsExtra from 'fs-extra';
 import { pipeline } from "node:stream/promises";
 import { createWriteStream } from "node:fs";
 import { promises as fs } from "node:fs";
