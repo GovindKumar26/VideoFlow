@@ -12,23 +12,16 @@ RUN apt-get update \
 
 WORKDIR /app
 
-# 2. Install your existing Node.js worker dependencies
-COPY server/package*.json ./server/
+# 2. Copy your entire codebase in first so ALL file paths are physically present
+COPY . .
+
+# 3. Install your existing Node.js worker dependencies
 RUN cd server && npm ci --omit=dev
 
+# 4. Install your Python dependencies directly from their explicit folder location 🎯
+RUN pip3 install --no-cache-dir --break-system-packages -r server/worker/ai-worker/requirements.txt
 
-
-# 3. Copy and install your Python Whisper worker dependencies
-# Using --break-system-packages is required by modern Debian/Ubuntu bases inside safe Docker containers
-# 🎯 Search flexibly for requirements.txt inside the repository context
-COPY **/requirements.txt ./temp_requirements.txt
-RUN pip3 install --no-cache-dir --break-system-packages -r temp_requirements.txt && rm temp_requirements.txt
-
-# 4. Copy your monorepo code directories
-COPY server ./server
-COPY start.js ./start.js
-
-# 5. Copy the supervisor orchestration mapping layer
+# 5. Copy the supervisor orchestration mapping layer to its proper system path
 COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 
 ENV PORT=7860
