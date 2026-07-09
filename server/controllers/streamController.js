@@ -37,16 +37,22 @@ const getContentType = (fileName) => {
     return "application/octet-stream";
 };
 
-const getSignedUrlForKey = async (key, ttlSeconds = DEFAULT_TTL_SECONDS) => {
+const getSignedUrlForKey = async (key, ttlSeconds = DEFAULT_TTL_SECONDS, responseContentType) => {
     const ttl = Number.parseInt(ttlSeconds, 10);
     const expiresIn = Number.isNaN(ttl) ? DEFAULT_TTL_SECONDS : ttl;
 
+    const commandParams = {
+        Bucket: process.env.S3_BUCKET_NAME,
+        Key: key
+    };
+
+    if (responseContentType) {
+        commandParams.ResponseContentType = responseContentType;
+    }
+
     return getSignedUrl(
         s3Client,
-        new GetObjectCommand({
-            Bucket: process.env.S3_BUCKET_NAME,
-            Key: key
-        }),
+        new GetObjectCommand(commandParams),
         { expiresIn }
     );
 };
@@ -184,15 +190,32 @@ export const getStreamAsset = asyncHandler(async (req, res) => {
 
 export const getStreamAssetByType = asyncHandler(async (req, res) => {
     const { id, asset } = req.params;
-    const key = `${ASSET_PREFIX}/${id}/${asset}`;
     const token = req.query.token;
     if (!verifyStreamToken(token, id)) {
         return res.status(401).json({ message: "Invalid or expired stream token" });
     }
 
+    // Lookup the correct storage key in MongoDB by checking the file's subtitles array
+    const file = await File.findById(id);
+    let key;
+    if (file && Array.isArray(file.subtitles)) {
+        const track = file.subtitles.find(t => t.key && t.key.endsWith(asset));
+        if (track) {
+            key = track.key;
+        }
+    }
+
+    // Fallback to the default key layout if no match is found in the database
+    if (!key) {
+        key = `${ASSET_PREFIX}/${id}/${asset}`;
+    }
+
     const presignTtl = Number.parseInt(process.env.STREAM_PRESIGN_TTL_SECONDS, 10);
     const ttlSeconds = Number.isNaN(presignTtl) ? DEFAULT_PRESIGN_TTL_SECONDS : presignTtl;
-    const signedUrl = await getSignedUrlForKey(key, ttlSeconds);
+
+    // Force ResponseContentType text/vtt for subtitles to prevent browser rejection
+    const responseContentType = asset.endsWith(".vtt") ? "text/vtt" : undefined;
+    const signedUrl = await getSignedUrlForKey(key, ttlSeconds, responseContentType);
 
     res.redirect(302, signedUrl);
 });
