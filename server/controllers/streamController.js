@@ -37,22 +37,16 @@ const getContentType = (fileName) => {
     return "application/octet-stream";
 };
 
-const getSignedUrlForKey = async (key, ttlSeconds = DEFAULT_TTL_SECONDS, responseContentType) => {
+const getSignedUrlForKey = async (key, ttlSeconds = DEFAULT_TTL_SECONDS) => {
     const ttl = Number.parseInt(ttlSeconds, 10);
     const expiresIn = Number.isNaN(ttl) ? DEFAULT_TTL_SECONDS : ttl;
 
-    const commandParams = {
-        Bucket: process.env.S3_BUCKET_NAME,
-        Key: key
-    };
-
-    if (responseContentType) {
-        commandParams.ResponseContentType = responseContentType;
-    }
-
     return getSignedUrl(
         s3Client,
-        new GetObjectCommand(commandParams),
+        new GetObjectCommand({
+            Bucket: process.env.S3_BUCKET_NAME,
+            Key: key
+        }),
         { expiresIn }
     );
 };
@@ -210,14 +204,20 @@ export const getStreamAssetByType = asyncHandler(async (req, res) => {
         key = `${ASSET_PREFIX}/${id}/${asset}`;
     }
 
-    const presignTtl = Number.parseInt(process.env.STREAM_PRESIGN_TTL_SECONDS, 10);
-    const ttlSeconds = Number.isNaN(presignTtl) ? DEFAULT_PRESIGN_TTL_SECONDS : presignTtl;
+    try {
+        const command = new GetObjectCommand({
+            Bucket: process.env.S3_BUCKET_NAME,
+            Key: key
+        });
+        const { Body, ContentType } = await s3Client.send(command);
 
-    // Force ResponseContentType text/vtt for subtitles to prevent browser rejection
-    const responseContentType = asset.endsWith(".vtt") ? "text/vtt" : undefined;
-    const signedUrl = await getSignedUrlForKey(key, ttlSeconds, responseContentType);
-
-    res.redirect(302, signedUrl);
+        // Force 'text/vtt' header for WebVTT subtitles so the browser plays them correctly
+        res.setHeader("Content-Type", asset.endsWith(".vtt") ? "text/vtt" : (ContentType || "application/octet-stream"));
+        Body.pipe(res);
+    } catch (s3Error) {
+        console.error(`S3 Asset Fetch Error for key ${key}:`, s3Error);
+        res.status(404).json({ message: "Asset not found." });
+    }
 });
 
 

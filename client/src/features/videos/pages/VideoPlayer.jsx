@@ -435,9 +435,9 @@ export default function VideoPlayer({ videoId }) {
       ref={videoRef}
       controls
       playsInline
-      // 🛡️ CRITICAL: Using "anonymous" CORS allows the browser to follow the 302 redirect
-      // to Cloudflare R2/S3 without credentials, preventing CORS block errors on the bucket.
-      crossOrigin="anonymous"
+      // 🛡️ CRITICAL: Forces the native track element requests to append cookies/credentials 
+      // when communicating with your proxy streaming backend endpoint
+      crossOrigin="use-credentials"
       poster={streamData?.thumbnailUrl}
       className="w-full h-full object-contain bg-black shadow-inner"
     >
