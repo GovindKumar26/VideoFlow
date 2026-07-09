@@ -11,6 +11,7 @@ import s3Client from "./s3Client.js";
 import { getRabbitChannel, rabbitConfig } from "../config/rabbitmq.js";
 import { publishEvent } from "../events/publisher.js";
 import sharp from "sharp";
+import { fileURLToPath } from "node:url";
 
 dotenv.config();
 
@@ -32,6 +33,9 @@ const renditions = [
     { name: "hls-720p", width: 1280, height: 720, bitrateK: 2800 },
     { name: "hls-480p", width: 854, height: 480, bitrateK: 1400 }
 ];
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // Inside your Transcoding Worker file
 
@@ -81,7 +85,7 @@ const runFfmpeg = (args) => {
     });
 };
 
-const LOGO_ASSET_PATH = path.join(process.cwd(), "assets", "videoflow-watermark.svg");
+const LOGO_ASSET_PATH = path.join(__dirname, "..", "assets", "videoflow-watermark.svg");
 
 const transcodeToHls = async (inputPath, outputDir) => {
     await ensureDir(outputDir);
