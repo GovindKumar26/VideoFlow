@@ -130,7 +130,8 @@ app.use(logger('dev'))
 const allowedOrigins = [
     'http://localhost:5173', 
     'https://video-flow-kree2.vercel.app',
-    'https://video-flow-murex.vercel.app' // ✨ Fixed: Authorized your active client origin
+    'https://video-flow-murex.vercel.app',
+    'https://video-flow-murex.vercel.app/'// ✨ Fixed: Authorized your active client origin
 ];
 
 
